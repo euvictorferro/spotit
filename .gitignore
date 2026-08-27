@@ -6,3 +6,5 @@ node_modules/
 xcuserdata/
 *.xcworkspace/xcuserdata/
 DerivedData/
+.env*
+supabase/.temp/
