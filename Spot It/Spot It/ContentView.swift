@@ -8,13 +8,39 @@
 import SwiftUI
 
 struct ContentView: View {
-    var body: some View {
-        TabView {
-            CaptureView()
-                .tabItem { Label("Captura", systemImage: "camera") }
+    @State private var showCapture = false
 
-            WalletView()
-                .tabItem { Label("Wallet", systemImage: "wallet.pass") }
+    var body: some View {
+        ZStack(alignment: .bottomTrailing) {
+            TabView {
+                FeedView()
+                    .tabItem { Label("Feed", systemImage: "house") }
+
+                WalletView()
+                    .tabItem { Label("Wallet", systemImage: "wallet.pass") }
+
+                DMView()
+                    .tabItem { Label("DM", systemImage: "message") }
+
+                ProfileView()
+                    .tabItem { Label("Perfil", systemImage: "person.circle") }
+            }
+
+            Button {
+                showCapture = true
+            } label: {
+                Image(systemName: "plus")
+                    .font(.title2.bold())
+                    .foregroundStyle(.white)
+                    .frame(width: 56, height: 56)
+                    .background(Circle().fill(Color.accentColor))
+                    .shadow(radius: 4, y: 2)
+            }
+            .padding(.trailing, 20)
+            .padding(.bottom, 70)
+        }
+        .sheet(isPresented: $showCapture) {
+            CaptureView()
         }
     }
 }

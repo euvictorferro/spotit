@@ -26,6 +26,13 @@ struct WalletView: View {
                 }
             }
             .navigationTitle("Wallet")
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    NavigationLink(destination: MapView(scope: .wallet)) {
+                        Image(systemName: "map")
+                    }
+                }
+            }
             .task { await load() }
             .refreshable { await load() }
             .overlay {
