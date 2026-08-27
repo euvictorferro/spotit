@@ -30,7 +30,7 @@ struct WalletView: View {
                     case .summary:
                         WalletSummaryView(items: items)
                     case .all:
-                        allTab
+                        WalletAllView(items: items)
                     case .sets:
                         WalletSetsView(items: items)
                     }
@@ -95,47 +95,6 @@ struct WalletView: View {
         }
         .padding(4)
         .background(Color(.secondarySystemBackground), in: Capsule())
-    }
-
-    private var allTab: some View {
-        VStack(spacing: Theme.Spacing.md) {
-            ForEach(items) { item in
-                walletRow(item)
-            }
-        }
-    }
-
-    private func walletRow(_ item: WalletItem) -> some View {
-        HStack(spacing: Theme.Spacing.md) {
-            RoundedRectangle(cornerRadius: Theme.cornerRadius)
-                .fill(
-                    LinearGradient(
-                        colors: [Theme.rarityColor(item.raridade).opacity(0.55), Theme.rarityColor(item.raridade).opacity(0.15)],
-                        startPoint: .topLeading, endPoint: .bottomTrailing
-                    )
-                )
-                .frame(width: 56, height: 56)
-                .overlay(Image(systemName: "car.side.fill").foregroundStyle(Theme.rarityColor(item.raridade)))
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(item.modelo).font(.subheadline).fontWeight(.semibold)
-                if let ano = item.ano {
-                    Text("\(ano)").font(.caption).foregroundStyle(.secondary)
-                }
-            }
-
-            Spacer()
-
-            VStack(alignment: .trailing, spacing: 2) {
-                Text(item.valorEstimadoUsd.asDollars)
-                    .font(.system(.footnote, design: .rounded, weight: .bold))
-                Text("Raridade \(item.raridade)/10")
-                    .font(.caption2)
-                    .foregroundStyle(Theme.rarityColor(item.raridade))
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .rarityCard(item.raridade)
     }
 
     private func load() async {
