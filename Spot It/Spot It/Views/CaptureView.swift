@@ -36,7 +36,7 @@ struct CaptureView: View {
     }
 
     private func recognize(_ image: UIImage) async {
-        guard let data = image.jpegData(compressionQuality: 0.7) else { return }
+        guard let data = image.resizedForUpload().jpegData(compressionQuality: 0.6) else { return }
         isLoading = true
         errorMessage = nil
         do {
@@ -76,4 +76,17 @@ struct CameraPicker: UIViewControllerRepresentable {
 
 extension CarInfo: Identifiable {
     var id: String { modelo ?? UUID().uuidString }
+}
+
+extension UIImage {
+    /// Redimensiona pra um lado máximo de 1024px — fotos da câmera em resolução
+    /// total (12MP+) geram payload grande demais pro endpoint de reconhecimento.
+    func resizedForUpload(maxDimension: CGFloat = 1024) -> UIImage {
+        let largestSide = max(size.width, size.height)
+        guard largestSide > maxDimension else { return self }
+        let scale = maxDimension / largestSide
+        let newSize = CGSize(width: size.width * scale, height: size.height * scale)
+        let renderer = UIGraphicsImageRenderer(size: newSize)
+        return renderer.image { _ in draw(in: CGRect(origin: .zero, size: newSize)) }
+    }
 }

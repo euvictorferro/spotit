@@ -1,7 +1,14 @@
 import Foundation
 
-enum RecognizeError: Error {
-    case invalidResponse
+enum RecognizeError: LocalizedError {
+    case invalidResponse(statusCode: Int, body: String)
+
+    var errorDescription: String? {
+        switch self {
+        case .invalidResponse(let statusCode, let body):
+            return "HTTP \(statusCode): \(body.prefix(200))"
+        }
+    }
 }
 
 struct RecognizeService {
@@ -17,7 +24,9 @@ struct RecognizeService {
         let (data, response) = try await URLSession.shared.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
-            throw RecognizeError.invalidResponse
+            let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
+            let body = String(data: data, encoding: .utf8) ?? "<sem corpo>"
+            throw RecognizeError.invalidResponse(statusCode: statusCode, body: body)
         }
 
         return try JSONDecoder().decode(CarInfo.self, from: data)

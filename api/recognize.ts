@@ -53,10 +53,11 @@ export default async function handler(req: Req, res: Res) {
 
   const textBlock = message.content.find((b) => b.type === 'text');
   const raw = textBlock && 'text' in textBlock ? textBlock.text : '{"reconhecido": false}';
-
+  // Claude às vezes envolve o JSON em ```json ... ``` mesmo quando instruído a não fazer isso.
+  const cleaned = raw.trim().replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '');
   let parsed;
   try {
-    parsed = JSON.parse(raw);
+    parsed = JSON.parse(cleaned);
   } catch {
     parsed = { reconhecido: false };
   }
