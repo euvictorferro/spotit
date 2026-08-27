@@ -165,9 +165,10 @@ struct WalletFilterSheet: View {
             HStack(spacing: 5) {
                 if let icon { Image(systemName: icon) }
                 if let emoji { FlagBadge(flag: emoji).frame(width: 16, height: 16) }
-                Text(label)
+                Text(label).lineLimit(1)
             }
             .font(.subheadline)
+            .fixedSize()
             .padding(.horizontal, Theme.Spacing.md)
             .padding(.vertical, Theme.Spacing.sm)
             .background(isSelected ? Color.accentColor : Color(.secondarySystemBackground), in: Capsule())
@@ -190,13 +191,11 @@ struct WalletFilterSheet: View {
     }
 }
 
-/// Layout tipo "flow" simples (quebra linha) pra chips — LazyVGrid adaptativo
-/// já resolve sem precisar de um layout customizado.
 private struct FlowChips<Content: View>: View {
     @ViewBuilder let content: Content
 
     var body: some View {
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: 80), spacing: 8)], alignment: .leading, spacing: 8) {
+        FlowLayout(spacing: 8) {
             content
         }
     }

@@ -1,8 +1,9 @@
 import SwiftUI
 
 /// Slider de faixa (piso/teto) reutilizável — usado no filtro de Ano e de
-/// Preço da Wallet. `histogram` é opcional: se vier, desenha barrinhas de
-/// distribuição atrás da trilha (quantos carros caem em cada faixa).
+/// Preço da Wallet. `histogram` é opcional: se vier, desenha um gráfico de
+/// distribuição em cima (quantos carros caem em cada faixa), com a trilha
+/// do slider embaixo. Barras dentro da faixa selecionada ficam destacadas.
 struct RangeSliderView: View {
     let bounds: ClosedRange<Double>
     @Binding var low: Double
@@ -11,16 +12,20 @@ struct RangeSliderView: View {
     var formatValue: (Double) -> String = { String(format: "%.0f", $0) }
 
     private let thumbSize: CGFloat = 22
+    private let barsHeight: CGFloat = 44
 
     var body: some View {
         VStack(spacing: Theme.Spacing.sm) {
+            if !histogram.isEmpty {
+                GeometryReader { geo in
+                    histogramBars(width: geo.size.width)
+                }
+                .frame(height: barsHeight)
+            }
+
             GeometryReader { geo in
                 let width = geo.size.width
                 ZStack(alignment: .leading) {
-                    if !histogram.isEmpty {
-                        histogramBars(width: width)
-                    }
-
                     Capsule().fill(Color(.tertiarySystemFill)).frame(height: 4)
 
                     Capsule()
@@ -33,7 +38,7 @@ struct RangeSliderView: View {
                 }
                 .frame(maxHeight: .infinity, alignment: .center)
             }
-            .frame(height: histogram.isEmpty ? 28 : 60)
+            .frame(height: 28)
 
             HStack {
                 Text(formatValue(low)).font(.caption).foregroundStyle(.secondary)
@@ -45,16 +50,21 @@ struct RangeSliderView: View {
 
     private func histogramBars(width: CGFloat) -> some View {
         let maxCount = max(histogram.max() ?? 1, 1)
+        let bucketWidth = (bounds.upperBound - bounds.lowerBound) / Double(histogram.count)
         let barWidth = width / CGFloat(histogram.count)
+
         return HStack(alignment: .bottom, spacing: 1) {
-            ForEach(Array(histogram.enumerated()), id: \.offset) { _, count in
+            ForEach(Array(histogram.enumerated()), id: \.offset) { index, count in
+                let bucketStart = bounds.lowerBound + Double(index) * bucketWidth
+                let bucketEnd = bucketStart + bucketWidth
+                let isInSelection = bucketEnd > low && bucketStart < high
+
                 RoundedRectangle(cornerRadius: 1.5)
-                    .fill(Color.accentColor.opacity(0.25))
-                    .frame(width: barWidth - 1, height: max(4, 36 * CGFloat(count) / CGFloat(maxCount)))
+                    .fill(isInSelection ? Color.accentColor : Color(.tertiarySystemFill))
+                    .frame(width: max(0, barWidth - 1), height: max(4, barsHeight * CGFloat(count) / CGFloat(maxCount)))
             }
         }
-        .frame(width: width, height: 36, alignment: .bottom)
-        .offset(y: -6)
+        .frame(width: width, height: barsHeight, alignment: .bottom)
     }
 
     private func x(for value: Double, width: CGFloat) -> CGFloat {
@@ -92,7 +102,7 @@ struct RangeSliderView: View {
 
 #Preview {
     struct Demo: View {
-        @State private var low = 50_000.0
+        @State private var low = 390_000.0
         @State private var high = 2_000_000.0
         var body: some View {
             RangeSliderView(bounds: 45_000...3_000_000, low: $low, high: $high, histogram: [1, 3, 5, 2, 4, 1, 2, 0, 1, 1]) { "$\(Int($0))" }
