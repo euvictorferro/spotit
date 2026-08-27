@@ -29,6 +29,7 @@ struct WalletAllView: View {
 
     @State private var isSelecting = false
     @State private var selectedIDs: Set<UUID> = []
+    @State private var detailItem: WalletItem?
 
     init(items: [WalletItem]) {
         self.items = items
@@ -141,6 +142,9 @@ struct WalletAllView: View {
                 items: items,
                 resultCount: filteredAndSorted.count
             )
+        }
+        .sheet(item: $detailItem) { item in
+            CarDetailPageView(item: item)
         }
     }
 
@@ -258,7 +262,14 @@ struct WalletAllView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .rarityCard(item.raridade)
-        .onTapGesture { if isSelecting { toggle(item.id) } }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            if isSelecting {
+                toggle(item.id)
+            } else {
+                detailItem = item
+            }
+        }
     }
 
     private func toggle(_ id: UUID) {

@@ -66,7 +66,7 @@ struct WalletSummaryView: View {
 
             sectionHeader("Suas Coleções Oficiais")
             if let first = sets.first {
-                SetCard(brand: first.brand, info: first.info, count: first.items.count)
+                SetCard(brand: first.brand, info: first.info, count: first.items.count, totalValue: first.items.reduce(0) { $0 + $1.valorEstimadoUsd })
             }
         }
         .sheet(isPresented: $showFeedback) { FeedbackSheet() }
@@ -97,6 +97,7 @@ private struct BestCarPage {
 
 private struct BestCarsCarousel: View {
     let pages: [BestCarPage]
+    @State private var detailItem: WalletItem?
 
     var body: some View {
         TabView {
@@ -126,11 +127,16 @@ private struct BestCarsCarousel: View {
                 }
                 .padding(Theme.Spacing.md)
                 .card()
+                .contentShape(Rectangle())
+                .onTapGesture { detailItem = page.item }
             }
         }
         .tabViewStyle(.page)
         .indexViewStyle(.page(backgroundDisplayMode: .always))
         .frame(height: 300)
+        .sheet(item: $detailItem) { item in
+            CarDetailPageView(item: item)
+        }
     }
 
     private func valueLine(for page: BestCarPage) -> String {
@@ -210,6 +216,7 @@ struct SetCard: View {
     let brand: String
     let info: CarBrandInfo
     let count: Int
+    let totalValue: Double
 
     private var progress: Double {
         min(Double(count) / Double(info.knownModels), 1)
@@ -217,10 +224,8 @@ struct SetCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-            RoundedRectangle(cornerRadius: Theme.cornerRadius)
-                .fill(Color.accentColor.opacity(0.18))
+            BrandLogoBadge(brand: brand)
                 .frame(height: 100)
-                .overlay(Image(systemName: "car.side.fill").font(.system(size: 34)).foregroundStyle(Color.accentColor))
 
             HStack(alignment: .firstTextBaseline, spacing: 4) {
                 Text("\(count)").font(.title3).fontWeight(.heavy).foregroundStyle(Color.accentColor)
@@ -233,6 +238,9 @@ struct SetCard: View {
             Text(brand).font(.headline)
             Text("Você coletou \(Int(progress * 100))% dessa marca")
                 .font(.footnote)
+                .foregroundStyle(.secondary)
+            Text(totalValue.asDollars)
+                .font(.system(.subheadline, design: .rounded, weight: .bold))
                 .foregroundStyle(.secondary)
         }
         .padding(Theme.Spacing.md)
