@@ -85,7 +85,7 @@ struct FeedPostCard: View {
             Button {
                 showComments = true
             } label: {
-                Image(systemName: "message.circle")
+                MessageCircleIcon.icon(size: 20)
             }
 
             ShareLink(item: shareText) {
