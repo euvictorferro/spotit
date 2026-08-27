@@ -3,21 +3,25 @@ import SwiftUI
 struct FeedView: View {
     var body: some View {
         NavigationStack {
-            EmptyStateView(
-                icon: "car.side",
-                message: "Em construção — aqui vão aparecer as fotos de carros de quem você segue e da comunidade."
-            )
+            ScrollView {
+                VStack(spacing: Theme.Spacing.lg) {
+                    ForEach(FeedPost.sample) { post in
+                        FeedPostCard(post: post)
+                    }
+                }
+                .padding(Theme.Spacing.md)
+            }
             .navigationTitle("Feed")
             .toolbar {
                 ToolbarItemGroup(placement: .topBarTrailing) {
-                    NavigationLink(destination: NotificationsView()) {
-                        Image(systemName: "bell")
-                    }
                     NavigationLink(destination: MapView(scope: .feed)) {
                         Image(systemName: "globe")
                     }
                     NavigationLink(destination: EventsView()) {
                         Image(systemName: "ticket")
+                    }
+                    NavigationLink(destination: NotificationsView()) {
+                        Image(systemName: "bell")
                     }
                 }
             }

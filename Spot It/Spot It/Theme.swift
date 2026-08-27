@@ -24,9 +24,9 @@ enum Theme {
         }
     }
 
-    /// Glow proporcional à raridade — quanto mais raro, mais forte o brilho.
+    /// Glow proporcional à raridade — sutil de propósito (feedback: "estava forte demais").
     static func rarityGlow(_ raridade: Int) -> CGFloat {
-        raridade >= 9 ? 10 : (raridade >= 7 ? 6 : 0)
+        raridade >= 9 ? 6 : (raridade >= 7 ? 4 : 0)
     }
 }
 
@@ -52,8 +52,19 @@ extension View {
             )
             .overlay(
                 RoundedRectangle(cornerRadius: Theme.cornerRadius)
-                    .stroke(color, lineWidth: 1.5)
+                    .stroke(color.opacity(0.8), lineWidth: 1)
             )
-            .shadow(color: color.opacity(0.6), radius: Theme.rarityGlow(raridade))
+            .shadow(color: color.opacity(0.5), radius: Theme.rarityGlow(raridade))
+    }
+
+    /// Mesmo tratamento, mas pra foto full-bleed (sem padding/fundo) — feed.
+    func rarityPhotoBorder(_ raridade: Int) -> some View {
+        let color = Theme.rarityColor(raridade)
+        return self
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.cornerRadius)
+                    .stroke(color.opacity(raridade <= 3 ? 0.5 : 0.85), lineWidth: 1)
+            )
+            .shadow(color: color.opacity(0.45), radius: Theme.rarityGlow(raridade))
     }
 }
