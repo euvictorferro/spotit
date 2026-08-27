@@ -12,19 +12,12 @@ struct WalletView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: Theme.Spacing.md) {
-                    Text("$\(total, specifier: "%.0f")")
+                    Text(total, format: .currency(code: "USD").precision(.fractionLength(0)))
                         .font(.system(.largeTitle, design: .rounded, weight: .heavy))
                         .frame(maxWidth: .infinity, alignment: .leading)
 
                     ForEach(items) { item in
-                        VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-                            Text(item.modelo).font(.headline)
-                            Text("$\(item.valorEstimadoUsd, specifier: "%.0f") · Raridade \(item.raridade)/10")
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .rarityCard(item.raridade)
+                        walletRow(item)
                     }
                 }
                 .padding(Theme.Spacing.md)
@@ -47,9 +40,44 @@ struct WalletView: View {
         }
     }
 
+    private func walletRow(_ item: WalletItem) -> some View {
+        HStack(spacing: Theme.Spacing.md) {
+            RoundedRectangle(cornerRadius: Theme.cornerRadius)
+                .fill(
+                    LinearGradient(
+                        colors: [Theme.rarityColor(item.raridade).opacity(0.55), Theme.rarityColor(item.raridade).opacity(0.15)],
+                        startPoint: .topLeading, endPoint: .bottomTrailing
+                    )
+                )
+                .frame(width: 56, height: 56)
+                .overlay(Image(systemName: "car.side.fill").foregroundStyle(Theme.rarityColor(item.raridade)))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(item.modelo).font(.subheadline).fontWeight(.semibold)
+                if let ano = item.ano {
+                    Text("\(ano)").font(.caption).foregroundStyle(.secondary)
+                }
+            }
+
+            Spacer()
+
+            VStack(alignment: .trailing, spacing: 2) {
+                Text(item.valorEstimadoUsd, format: .currency(code: "USD").precision(.fractionLength(0)))
+                    .font(.system(.footnote, design: .rounded, weight: .bold))
+                Text("Raridade \(item.raridade)/10")
+                    .font(.caption2)
+                    .foregroundStyle(Theme.rarityColor(item.raridade))
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .rarityCard(item.raridade)
+    }
+
     private func load() async {
         isLoading = true
-        items = (try? await SupabaseService.fetchWalletItems()) ?? []
+        let fetched = (try? await SupabaseService.fetchWalletItems()) ?? []
+        // Sem itens reais salvos ainda — mostra exemplos pra visualizar a Wallet cheia.
+        items = fetched.isEmpty ? WalletItem.sample : fetched
         isLoading = false
     }
 }
