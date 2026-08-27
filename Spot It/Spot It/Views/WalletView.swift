@@ -10,20 +10,24 @@ struct WalletView: View {
 
     var body: some View {
         NavigationStack {
-            List {
-                Section {
-                    Text("Total: $\(total, specifier: "%.0f")")
-                        .font(.title2).bold()
-                }
+            ScrollView {
+                VStack(spacing: Theme.Spacing.md) {
+                    Text("$\(total, specifier: "%.0f")")
+                        .font(.system(.largeTitle, design: .rounded, weight: .heavy))
+                        .frame(maxWidth: .infinity, alignment: .leading)
 
-                ForEach(items) { item in
-                    VStack(alignment: .leading) {
-                        Text(item.modelo).font(.headline)
-                        Text("$\(item.valorEstimadoUsd, specifier: "%.0f") · Raridade \(item.raridade)/10")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
+                    ForEach(items) { item in
+                        VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                            Text(item.modelo).font(.headline)
+                            Text("$\(item.valorEstimadoUsd, specifier: "%.0f") · Raridade \(item.raridade)/10")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .rarityCard(item.raridade)
                     }
                 }
+                .padding(Theme.Spacing.md)
             }
             .navigationTitle("Wallet")
             .toolbar {

@@ -10,25 +10,36 @@ struct ResultView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: Theme.Spacing.md) {
                     if let image {
                         Image(uiImage: image)
                             .resizable()
                             .scaledToFit()
-                            .cornerRadius(12)
+                            .cornerRadius(Theme.cornerRadius)
                     }
 
                     if carInfo.reconhecido {
-                        Text(carInfo.modelo ?? "").font(.title2).bold()
-                        if let ano = carInfo.ano { Text("Ano: \(ano)") }
-                        if let motor = carInfo.motor { Text("Motor: \(motor)") }
-                        if let raridade = carInfo.raridade { Text("Raridade: \(raridade)/10") }
-                        if let valor = carInfo.valorEstimadoUsd {
-                            Text("Valor estimado: $\(valor, specifier: "%.0f")")
+                        VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                            HStack {
+                                Text(carInfo.modelo ?? "").font(.title2).bold()
+                                Spacer()
+                                if let raridade = carInfo.raridade {
+                                    Text("\(raridade)/10")
+                                        .font(.subheadline).bold()
+                                        .foregroundStyle(Theme.rarityColor(raridade))
+                                }
+                            }
+                            if let ano = carInfo.ano { Text("Ano: \(ano)") }
+                            if let motor = carInfo.motor { Text("Motor: \(motor)") }
+                            if let valor = carInfo.valorEstimadoUsd {
+                                Text("$\(valor, specifier: "%.0f")")
+                                    .font(.system(.title3, design: .rounded, weight: .bold))
+                            }
+                            if let fato = carInfo.fatoInteressante {
+                                Text(fato).font(.footnote).foregroundStyle(.secondary)
+                            }
                         }
-                        if let fato = carInfo.fatoInteressante {
-                            Text(fato).font(.footnote).foregroundStyle(.secondary)
-                        }
+                        .rarityCard(carInfo.raridade ?? 1)
 
                         Button(isSaving ? "Salvando..." : "Salvar na Wallet") {
                             Task { await save() }
@@ -43,7 +54,7 @@ struct ResultView: View {
                         Text(saveError).foregroundStyle(.red)
                     }
                 }
-                .padding()
+                .padding(Theme.Spacing.md)
             }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
