@@ -242,7 +242,7 @@ struct WalletAllView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(item.modelo).font(.subheadline).fontWeight(.semibold)
                 if let ano = item.ano {
-                    Text("\(ano)").font(.caption).foregroundStyle(.secondary)
+                    Text(verbatim: "\(ano)").font(.caption).foregroundStyle(.secondary)
                 }
             }
 

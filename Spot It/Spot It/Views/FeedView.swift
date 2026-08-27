@@ -11,7 +11,6 @@ struct FeedView: View {
                 }
                 .padding(Theme.Spacing.md)
             }
-            .navigationTitle("Feed")
             .toolbar {
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     NavigationLink(destination: MapView(scope: .feed)) {

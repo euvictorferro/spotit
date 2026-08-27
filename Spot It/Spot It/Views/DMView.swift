@@ -32,7 +32,6 @@ struct DMView: View {
                     }
                 }
             }
-            .navigationTitle("Mensagens")
         }
     }
 }

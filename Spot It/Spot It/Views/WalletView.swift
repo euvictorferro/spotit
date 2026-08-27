@@ -37,7 +37,6 @@ struct WalletView: View {
                 }
                 .padding(Theme.Spacing.md)
             }
-            .navigationTitle("Wallet")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     NavigationLink(destination: MapView(scope: .wallet)) {

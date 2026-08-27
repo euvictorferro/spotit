@@ -71,7 +71,6 @@ struct ProfileView: View {
                 }
                 .padding(Theme.Spacing.md)
             }
-            .navigationTitle("Perfil")
         }
     }
 

@@ -103,7 +103,7 @@ struct ResultView: View {
                 Text(carInfo.modelo ?? "Carro não identificado")
                     .font(.title3).fontWeight(.bold)
                 if let ano = carInfo.ano {
-                    Text("· \(ano)")
+                    Text(verbatim: "· \(ano)")
                         .font(.title3)
                         .foregroundStyle(.secondary)
                 }
@@ -229,7 +229,7 @@ struct ResultView: View {
                 HStack {
                     VStack(alignment: .leading) {
                         Text(variante.nome).fontWeight(.semibold)
-                        Text("\(variante.ano)").font(.caption).foregroundStyle(.secondary)
+                        Text(verbatim: "\(variante.ano)").font(.caption).foregroundStyle(.secondary)
                     }
                     Spacer()
                     Text(variante.valorEstimadoUsd.asDollars)
