@@ -3,9 +3,28 @@ import MapKit
 
 struct WalletSummaryView: View {
     let items: [WalletItem]
+    @State private var showFeedback = false
+    @State private var showFullMap = false
 
-    private var bestCars: [WalletItem] {
-        Array(items.sorted { $0.valorEstimadoUsd > $1.valorEstimadoUsd }.prefix(3))
+    private var mostExpensive: WalletItem? {
+        items.max { $0.valorEstimadoUsd < $1.valorEstimadoUsd }
+    }
+
+    private var fastest: WalletItem? {
+        items.compactMap { item in item.aceleracao0a100.map { (item, $0) } }
+            .min { $0.1 < $1.1 }?.0
+    }
+
+    private var rarest: WalletItem? {
+        items.max { $0.raridade < $1.raridade }
+    }
+
+    private var bestCarPages: [BestCarPage] {
+        [
+            mostExpensive.map { BestCarPage(item: $0, badge: "Mais Valioso") },
+            fastest.map { BestCarPage(item: $0, badge: "Mais Rápido") },
+            rarest.map { BestCarPage(item: $0, badge: "Mais Raro") },
+        ].compactMap { $0 }
     }
 
     private var countryBreakdown: [(info: CarBrandInfo, count: Int)] {
@@ -37,18 +56,22 @@ struct WalletSummaryView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
-            if !bestCars.isEmpty {
+            if !bestCarPages.isEmpty {
                 sectionHeader("Seus Melhores Carros")
-                BestCarsCarousel(cars: bestCars)
+                BestCarsCarousel(pages: bestCarPages)
             }
 
             sectionHeader("Distribuição Geográfica")
-            GeographicDistributionView(breakdown: countryBreakdown)
+            GeographicDistributionView(breakdown: countryBreakdown, onTapMap: { showFullMap = true })
 
             sectionHeader("Suas Coleções Oficiais")
             if let first = sets.first {
                 SetCard(brand: first.brand, info: first.info, count: first.items.count)
             }
+        }
+        .sheet(isPresented: $showFeedback) { FeedbackSheet() }
+        .fullScreenCover(isPresented: $showFullMap) {
+            NavigationStack { GeographicDistributionFullView(breakdown: countryBreakdown) }
         }
     }
 
@@ -56,39 +79,50 @@ struct WalletSummaryView: View {
         HStack {
             Text(title).font(.headline)
             Spacer()
-            Image(systemName: "ellipsis").foregroundStyle(.secondary)
+            Button {
+                showFeedback = true
+            } label: {
+                Image(systemName: "ellipsis").foregroundStyle(.secondary)
+            }
         }
     }
+}
+
+private struct BestCarPage {
+    let item: WalletItem
+    let badge: String
 }
 
 // MARK: - Best Cars Carousel
 
 private struct BestCarsCarousel: View {
-    let cars: [WalletItem]
+    let pages: [BestCarPage]
 
     var body: some View {
         TabView {
-            ForEach(cars) { car in
+            ForEach(pages, id: \.badge) { page in
                 VStack(spacing: Theme.Spacing.md) {
-                    Text(car.modelo).font(.subheadline).fontWeight(.semibold)
+                    Text(page.item.modelo).font(.subheadline).fontWeight(.semibold)
 
                     RoundedRectangle(cornerRadius: Theme.cornerRadius)
                         .fill(
                             LinearGradient(
-                                colors: [Theme.rarityColor(car.raridade).opacity(0.6), Theme.rarityColor(car.raridade).opacity(0.15)],
+                                colors: [Theme.rarityColor(page.item.raridade).opacity(0.6), Theme.rarityColor(page.item.raridade).opacity(0.15)],
                                 startPoint: .top, endPoint: .bottom
                             )
                         )
-                        .frame(height: 140)
-                        .overlay(Image(systemName: "car.side.fill").font(.system(size: 40)).foregroundStyle(Theme.rarityColor(car.raridade)))
+                        .frame(height: 130)
+                        .overlay(Image(systemName: "car.side.fill").font(.system(size: 40)).foregroundStyle(Theme.rarityColor(page.item.raridade)))
 
                     VStack(spacing: 2) {
-                        Text(car.valorEstimadoUsd, format: .currency(code: "USD").precision(.fractionLength(0)))
+                        Text(valueLine(for: page))
                             .font(.system(.title3, design: .rounded, weight: .heavy))
-                        Text(car.id == cars.first?.id ? "Mais Valioso" : "Top \(cars.firstIndex(where: { $0.id == car.id })! + 1)")
+                        Text(page.badge)
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
+                    // Reserva espaço pra bolinha de paginação não cobrir o texto.
+                    Spacer(minLength: 22)
                 }
                 .padding(Theme.Spacing.md)
                 .card()
@@ -96,7 +130,18 @@ private struct BestCarsCarousel: View {
         }
         .tabViewStyle(.page)
         .indexViewStyle(.page(backgroundDisplayMode: .always))
-        .frame(height: 280)
+        .frame(height: 300)
+    }
+
+    private func valueLine(for page: BestCarPage) -> String {
+        switch page.badge {
+        case "Mais Rápido":
+            return page.item.aceleracao0a100.map { String(format: "%.1fs · 0-100km/h", $0) } ?? "—"
+        case "Mais Raro":
+            return "Raridade \(page.item.raridade)/10"
+        default:
+            return page.item.valorEstimadoUsd.formatted(.currency(code: "USD").precision(.fractionLength(0)))
+        }
     }
 }
 
@@ -104,7 +149,9 @@ private struct BestCarsCarousel: View {
 
 private struct GeographicDistributionView: View {
     let breakdown: [(info: CarBrandInfo, count: Int)]
+    let onTapMap: () -> Void
 
+    private var top3: [(info: CarBrandInfo, count: Int)] { Array(breakdown.prefix(3)) }
     private var totalCount: Int { breakdown.reduce(0) { $0 + $1.count } }
 
     private var position: MapCameraPosition {
@@ -134,16 +181,23 @@ private struct GeographicDistributionView: View {
             .frame(height: 160)
             .clipShape(RoundedRectangle(cornerRadius: Theme.cornerRadius))
             .allowsHitTesting(false)
+            .onTapGesture { onTapMap() }
 
-            ForEach(breakdown, id: \.info.country) { entry in
+            ForEach(top3, id: \.info.country) { entry in
                 HStack {
-                    Text(entry.info.flag)
+                    FlagBadge(flag: entry.info.flag)
                     Text(entry.info.country).font(.subheadline)
                     Spacer()
                     Text("\(entry.count) carro\(entry.count == 1 ? "" : "s")")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
+            }
+
+            if breakdown.count > 3 {
+                Button("Ver Todos") { onTapMap() }
+                    .buttonStyle(.bordered)
+                    .frame(maxWidth: .infinity)
             }
         }
         .card()

@@ -9,12 +9,17 @@ struct WalletItem: Codable, Identifiable {
     let valorEstimadoUsd: Double
     let fotoUrl: String
     let createdAt: Date
+    /// Ainda não persiste no Supabase (coluna não existe na tabela) — só
+    /// vem preenchido nos dados de exemplo. Usado pra ordenar "Mais Rápido"
+    /// no carrossel da Wallet.
+    let aceleracao0a100: Double?
 
     enum CodingKeys: String, CodingKey {
         case id, modelo, ano, raridade
         case valorEstimadoUsd = "valor_estimado_usd"
         case fotoUrl = "foto_url"
         case createdAt = "created_at"
+        case aceleracao0a100 = "aceleracao_0_100"
     }
 }
 
