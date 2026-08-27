@@ -16,6 +16,11 @@ Data: 2026-08-27
 
 Se o usuário tirar foto de um carro já existente na coleção (mesmo modelo + mesma configuração — cor, rodas, etc.), a foto ainda pode contar, mas a nota de raridade cai (ex: de 9 pra 6 na segunda vez). Precisa de lógica de comparação entre fotos (visual matching) — deixado pra depois da wallet básica estar funcionando.
 
+### Autenticação real de usuário
+Data: 2026-08-27
+
+Pra essa fatia (captura → wallet), usamos **login anônimo automático do Supabase** — sem tela de cadastro, só pra satisfazer o RLS da tabela `wallet_items`. Isso funciona bem enquanto o app é só "eu e minha wallet", mas quando entrar a Rede Social (feed, seguir pessoas, perfil, chat), vai precisar de conta de verdade (nome, foto de perfil, login persistente entre dispositivos) — login anônimo não sobrevive a reinstalar o app nem identifica a pessoa pros outros usuários.
+
 ### Loja de roupas / merch
 Data: 2026-08-27
 
