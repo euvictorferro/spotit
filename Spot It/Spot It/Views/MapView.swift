@@ -11,14 +11,12 @@ struct MapView: View {
     let scope: MapScope
 
     var body: some View {
-        VStack {
-            Text("Em construção — mapa com a localização das fotos.")
-                .foregroundStyle(.secondary)
-                .padding()
-            Text(scope == .wallet ? "Mostrando: só suas fotos" : "Mostrando: você + quem você segue")
-                .font(.footnote)
-                .foregroundStyle(.tertiary)
-        }
+        EmptyStateView(
+            icon: "map",
+            message: scope == .wallet
+                ? "Em construção — mapa com a localização das suas fotos."
+                : "Em construção — mapa com as fotos suas e de quem você segue."
+        )
         .navigationTitle("Mapa")
     }
 }

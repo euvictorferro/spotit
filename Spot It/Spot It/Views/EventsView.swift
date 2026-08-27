@@ -2,10 +2,10 @@ import SwiftUI
 
 struct EventsView: View {
     var body: some View {
-        List {
-            Text("Em construção — aqui vão aparecer os encontros de carro perto de você.")
-                .foregroundStyle(.secondary)
-        }
+        EmptyStateView(
+            icon: "ticket",
+            message: "Em construção — aqui vão aparecer os encontros de carro perto de você."
+        )
         .navigationTitle("Eventos")
     }
 }

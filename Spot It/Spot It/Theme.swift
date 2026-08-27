@@ -31,6 +31,16 @@ enum Theme {
 }
 
 extension View {
+    /// Card neutro (sem cor de raridade) — pra conteúdo genérico agrupado.
+    func card() -> some View {
+        self
+            .padding(Theme.Spacing.md)
+            .background(
+                RoundedRectangle(cornerRadius: Theme.cornerRadius)
+                    .fill(Color(.secondarySystemBackground))
+            )
+    }
+
     /// Aplica borda + glow de raridade num card.
     func rarityCard(_ raridade: Int) -> some View {
         let color = Theme.rarityColor(raridade)

@@ -3,10 +3,10 @@ import SwiftUI
 struct FeedView: View {
     var body: some View {
         NavigationStack {
-            List {
-                Text("Em construção — aqui vão aparecer as fotos de carros de quem você segue e da comunidade.")
-                    .foregroundStyle(.secondary)
-            }
+            EmptyStateView(
+                icon: "car.side",
+                message: "Em construção — aqui vão aparecer as fotos de carros de quem você segue e da comunidade."
+            )
             .navigationTitle("Feed")
             .toolbar {
                 ToolbarItemGroup(placement: .topBarTrailing) {

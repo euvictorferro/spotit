@@ -9,7 +9,7 @@ struct CaptureView: View {
     @State private var errorMessage: String?
 
     var body: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: Theme.Spacing.lg) {
             if isLoading {
                 ProgressView("Identificando o carro...")
             } else {
@@ -17,10 +17,15 @@ struct CaptureView: View {
                     showCamera = true
                 }
                 .buttonStyle(.borderedProminent)
+                .controlSize(.large)
             }
 
             if let errorMessage {
-                Text(errorMessage).foregroundStyle(.red)
+                Text(errorMessage)
+                    .font(.footnote)
+                    .foregroundStyle(.red)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, Theme.Spacing.lg)
             }
         }
         .sheet(isPresented: $showCamera) {
