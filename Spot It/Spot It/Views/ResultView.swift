@@ -110,7 +110,7 @@ struct ResultView: View {
             }
 
             if let valor = carInfo.valorEstimadoUsd {
-                Text(valor, format: .currency(code: "USD").precision(.fractionLength(0)))
+                Text(valor.asDollars)
                     .font(.system(size: 34, weight: .heavy, design: .rounded))
             }
 
@@ -232,7 +232,7 @@ struct ResultView: View {
                         Text("\(variante.ano)").font(.caption).foregroundStyle(.secondary)
                     }
                     Spacer()
-                    Text(variante.valorEstimadoUsd, format: .currency(code: "USD").precision(.fractionLength(0)))
+                    Text(variante.valorEstimadoUsd.asDollars)
                         .font(.system(.subheadline, design: .rounded, weight: .bold))
                 }
                 Text(variante.descricao)

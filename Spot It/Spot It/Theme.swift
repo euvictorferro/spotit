@@ -30,6 +30,19 @@ enum Theme {
     }
 }
 
+extension Double {
+    /// "$1.234.567" — sempre símbolo $ na frente + separador de milhar "."
+    /// (o formatter de currency padrão do sistema vira "US$" no pt-BR).
+    var asDollars: String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.groupingSeparator = "."
+        formatter.maximumFractionDigits = 0
+        let number = formatter.string(from: NSNumber(value: self)) ?? "\(Int(self))"
+        return "$\(number)"
+    }
+}
+
 extension View {
     /// Card neutro (sem cor de raridade) — pra conteúdo genérico agrupado.
     func card() -> some View {

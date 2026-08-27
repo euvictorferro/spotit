@@ -63,7 +63,7 @@ struct FeedPostCard: View {
     }
 
     private var valueChip: some View {
-        Text(post.valorEstimadoUsd, format: .currency(code: "USD").precision(.fractionLength(0)))
+        Text(post.valorEstimadoUsd.asDollars)
             .font(.system(.footnote, design: .rounded, weight: .bold))
             .foregroundStyle(.white)
             .padding(.horizontal, Theme.Spacing.sm)
@@ -147,7 +147,7 @@ struct CarDetailSheet: View {
                     VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
                         DetailRow(label: "Ano", value: "\(post.ano)")
                         DetailRow(label: "Motor", value: post.motor)
-                        DetailRow(label: "Valor estimado", value: post.valorEstimadoUsd.formatted(.currency(code: "USD").precision(.fractionLength(0))))
+                        DetailRow(label: "Valor estimado", value: post.valorEstimadoUsd.asDollars)
                     }
 
                     Divider()

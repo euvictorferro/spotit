@@ -140,7 +140,7 @@ private struct BestCarsCarousel: View {
         case "Mais Raro":
             return "Raridade \(page.item.raridade)/10"
         default:
-            return page.item.valorEstimadoUsd.formatted(.currency(code: "USD").precision(.fractionLength(0)))
+            return page.item.valorEstimadoUsd.asDollars
         }
     }
 }

@@ -55,7 +55,7 @@ struct ProfileView: View {
 
                                 Spacer()
 
-                                Text(entry.walletValueUsd, format: .currency(code: "USD").precision(.fractionLength(0)))
+                                Text(entry.walletValueUsd.asDollars)
                                     .font(.system(.footnote, design: .rounded, weight: .bold))
                             }
                             .padding(.vertical, 4)

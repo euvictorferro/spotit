@@ -57,7 +57,7 @@ struct WalletView: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-            Text(total, format: .currency(code: "USD").precision(.fractionLength(0)))
+            Text(total.asDollars)
                 .font(.system(.largeTitle, design: .rounded, weight: .heavy))
             Text("Valor da Coleção (USD)")
                 .font(.footnote)
@@ -127,7 +127,7 @@ struct WalletView: View {
             Spacer()
 
             VStack(alignment: .trailing, spacing: 2) {
-                Text(item.valorEstimadoUsd, format: .currency(code: "USD").precision(.fractionLength(0)))
+                Text(item.valorEstimadoUsd.asDollars)
                     .font(.system(.footnote, design: .rounded, weight: .bold))
                 Text("Raridade \(item.raridade)/10")
                     .font(.caption2)
