@@ -3,7 +3,15 @@ import SwiftUI
 struct FeedPostCard: View {
     let post: FeedPost
     @State private var isLiked = false
+    @State private var likeCount = Int.random(in: 40...900)
+    @State private var comments: [Comment]
     @State private var showDetails = false
+    @State private var showComments = false
+
+    init(post: FeedPost) {
+        self.post = post
+        self._comments = State(initialValue: Comment.sampleFor(post))
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
@@ -28,6 +36,9 @@ struct FeedPostCard: View {
         }
         .sheet(isPresented: $showDetails) {
             CarDetailSheet(post: post)
+        }
+        .sheet(isPresented: $showComments) {
+            CommentsSheet(post: post, comments: $comments)
         }
     }
 
@@ -65,13 +76,24 @@ struct FeedPostCard: View {
         HStack(spacing: Theme.Spacing.md) {
             Button {
                 isLiked.toggle()
+                likeCount += isLiked ? 1 : -1
             } label: {
                 Image(systemName: isLiked ? "heart.fill" : "heart")
                     .foregroundStyle(isLiked ? .red : .primary)
             }
-            Image(systemName: "bubble.right")
-            Image(systemName: "paperplane")
+
+            Button {
+                showComments = true
+            } label: {
+                Image(systemName: "message.circle")
+            }
+
+            ShareLink(item: shareText) {
+                Image(systemName: "paperplane")
+            }
+
             Spacer()
+
             Button {
                 showDetails = true
             } label: {
@@ -82,37 +104,62 @@ struct FeedPostCard: View {
         .foregroundStyle(.primary)
         .buttonStyle(.plain)
     }
+
+    private var shareText: String {
+        "Olha esse carro que eu achei no Spot It! 🏎️"
+    }
 }
 
 /// Aberta ao tocar no ícone de info — mostra o que sumiu do card do feed
-/// (modelo, ano, motor, raridade, fato interessante).
+/// (modelo, ano, motor, raridade, fato interessante). Visual discreto de
+/// propósito: sem glow, o card do feed já chama atenção o suficiente.
 struct CarDetailSheet: View {
     let post: FeedPost
     @Environment(\.dismiss) private var dismiss
 
+    private var rarityLabel: String {
+        switch post.raridade {
+        case ...3: return "Comum"
+        case 4...6: return "Incomum"
+        case 7...8: return "Raro"
+        default: return "Lendário"
+        }
+    }
+
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-                    HStack {
+                VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+                    VStack(alignment: .leading, spacing: 4) {
                         Text(post.modelo).font(.title3).bold()
-                        Spacer()
-                        Text("\(post.raridade)/10")
-                            .font(.subheadline).bold()
-                            .foregroundStyle(Theme.rarityColor(post.raridade))
+                        HStack(spacing: 6) {
+                            Circle()
+                                .fill(Theme.rarityColor(post.raridade))
+                                .frame(width: 7, height: 7)
+                            Text("\(rarityLabel) · \(post.raridade)/10")
+                                .font(.footnote).fontWeight(.semibold)
+                                .foregroundStyle(.secondary)
+                        }
                     }
-                    Text("Ano: \(post.ano)")
-                    Text("Motor: \(post.motor)")
-                    Text(post.valorEstimadoUsd, format: .currency(code: "USD").precision(.fractionLength(0)))
-                        .font(.system(.title3, design: .rounded, weight: .bold))
+
+                    Divider()
+
+                    VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                        DetailRow(label: "Ano", value: "\(post.ano)")
+                        DetailRow(label: "Motor", value: post.motor)
+                        DetailRow(label: "Valor estimado", value: post.valorEstimadoUsd.formatted(.currency(code: "USD").precision(.fractionLength(0))))
+                    }
+
+                    Divider()
+
                     Text(post.fatoInteressante)
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
-                .rarityCard(post.raridade)
                 .padding(Theme.Spacing.md)
             }
             .navigationTitle("Detalhes do carro")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Fechar") { dismiss() }
@@ -120,6 +167,20 @@ struct CarDetailSheet: View {
             }
         }
         .presentationDetents([.medium])
+    }
+}
+
+private struct DetailRow: View {
+    let label: String
+    let value: String
+
+    var body: some View {
+        HStack {
+            Text(label).foregroundStyle(.secondary)
+            Spacer()
+            Text(value).fontWeight(.medium)
+        }
+        .font(.subheadline)
     }
 }
 
