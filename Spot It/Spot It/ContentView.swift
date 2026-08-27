@@ -9,7 +9,13 @@ import SwiftUI
 
 struct ContentView: View {
     var body: some View {
-        CaptureView()
+        TabView {
+            CaptureView()
+                .tabItem { Label("Captura", systemImage: "camera") }
+
+            WalletView()
+                .tabItem { Label("Wallet", systemImage: "wallet.pass") }
+        }
     }
 }
 
