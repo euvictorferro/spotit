@@ -1,4 +1,5 @@
 import SwiftUI
+import MapKit
 
 enum MapScope {
     /// Mostra só as fotos do próprio usuário (aberto a partir da Wallet).
@@ -9,15 +10,31 @@ enum MapScope {
 
 struct MapView: View {
     let scope: MapScope
+    @State private var position: MapCameraPosition = .region(
+        MKCoordinateRegion(center: .init(latitude: 26.14, longitude: -81.79), span: .init(latitudeDelta: 0.6, longitudeDelta: 0.6))
+    )
+
+    private var spots: [CarSpot] {
+        scope == .wallet ? CarSpot.sample.filter(\.isMine) : CarSpot.sample
+    }
 
     var body: some View {
-        EmptyStateView(
-            icon: "map",
-            message: scope == .wallet
-                ? "Em construção — mapa com a localização das suas fotos."
-                : "Em construção — mapa com as fotos suas e de quem você segue."
-        )
+        Map(position: $position) {
+            ForEach(spots) { spot in
+                Marker(spot.modelo, systemImage: "car.fill", coordinate: spot.coordinate)
+                    .tint(spot.isMine ? Color.accentColor : .blue)
+            }
+        }
         .navigationTitle("Mapa")
+        .navigationBarTitleDisplayMode(.inline)
+        .overlay(alignment: .bottom) {
+            Text(scope == .wallet ? "Mostrando: só suas fotos" : "Mostrando: você + quem você segue")
+                .font(.caption)
+                .padding(.horizontal, Theme.Spacing.md)
+                .padding(.vertical, Theme.Spacing.sm)
+                .background(.thinMaterial, in: Capsule())
+                .padding(.bottom, Theme.Spacing.lg)
+        }
     }
 }
 
