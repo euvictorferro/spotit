@@ -18,14 +18,50 @@ struct WalletAllView: View {
 
     @State private var sort: WalletSortOption = .addedNewestFirst
     @State private var showFilter = false
+    @State private var selectedCountry: String? // nil = todos
+    @State private var selectedEdition: String? // nil = todas
     @State private var selectedBrand: String? // nil = todas
     @State private var selectedRarityTiers: Set<Int> = [] // 1=comum..4=lendário
+    @State private var yearLow: Double
+    @State private var yearHigh: Double
+    @State private var priceLow: Double
+    @State private var priceHigh: Double
 
     @State private var isSelecting = false
     @State private var selectedIDs: Set<UUID> = []
 
+    init(items: [WalletItem]) {
+        self.items = items
+        let years = items.compactMap { $0.ano }.map(Double.init)
+        let prices = items.map(\.valorEstimadoUsd)
+        _yearLow = State(initialValue: years.min() ?? 1990)
+        _yearHigh = State(initialValue: years.max() ?? 2026)
+        _priceLow = State(initialValue: prices.min() ?? 0)
+        _priceHigh = State(initialValue: prices.max() ?? 1)
+    }
+
     private var brands: [String] {
         Array(Set(items.map { CarBrandInfo.brand(for: $0.modelo) })).sorted()
+    }
+
+    private var countries: [String] {
+        Array(Set(items.compactMap { CarBrandInfo.info(for: $0.modelo)?.country })).sorted()
+    }
+
+    private var editions: [String] {
+        Array(Set(items.compactMap(\.edicaoEspecial))).sorted()
+    }
+
+    private var yearBounds: ClosedRange<Double> {
+        let years = items.compactMap { $0.ano }.map(Double.init)
+        guard let min = years.min(), let max = years.max(), min < max else { return 1990...2026 }
+        return min...max
+    }
+
+    private var priceBounds: ClosedRange<Double> {
+        let prices = items.map(\.valorEstimadoUsd)
+        guard let min = prices.min(), let max = prices.max(), min < max else { return 0...1 }
+        return min...max
     }
 
     private func tier(for raridade: Int) -> Int {
@@ -39,12 +75,23 @@ struct WalletAllView: View {
 
     private var filteredAndSorted: [WalletItem] {
         var result = items
+        if let selectedCountry {
+            result = result.filter { CarBrandInfo.info(for: $0.modelo)?.country == selectedCountry }
+        }
+        if let selectedEdition {
+            result = result.filter { $0.edicaoEspecial == selectedEdition }
+        }
         if let selectedBrand {
             result = result.filter { CarBrandInfo.brand(for: $0.modelo) == selectedBrand }
         }
         if !selectedRarityTiers.isEmpty {
             result = result.filter { selectedRarityTiers.contains(tier(for: $0.raridade)) }
         }
+        result = result.filter { item in
+            guard let ano = item.ano else { return true }
+            return Double(ano) >= yearLow && Double(ano) <= yearHigh
+        }
+        result = result.filter { $0.valorEstimadoUsd >= priceLow && $0.valorEstimadoUsd <= priceHigh }
         switch sort {
         case .priceHighToLow: result.sort { $0.valorEstimadoUsd > $1.valorEstimadoUsd }
         case .priceLowToHigh: result.sort { $0.valorEstimadoUsd < $1.valorEstimadoUsd }
@@ -78,9 +125,20 @@ struct WalletAllView: View {
         }
         .sheet(isPresented: $showFilter) {
             WalletFilterSheet(
+                countries: countries,
+                selectedCountry: $selectedCountry,
+                editions: editions,
+                selectedEdition: $selectedEdition,
                 brands: brands,
                 selectedBrand: $selectedBrand,
                 selectedRarityTiers: $selectedRarityTiers,
+                yearBounds: yearBounds,
+                yearLow: $yearLow,
+                yearHigh: $yearHigh,
+                priceBounds: priceBounds,
+                priceLow: $priceLow,
+                priceHigh: $priceHigh,
+                items: items,
                 resultCount: filteredAndSorted.count
             )
         }

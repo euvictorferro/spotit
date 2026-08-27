@@ -13,11 +13,15 @@ struct WalletItem: Codable, Identifiable {
     /// vem preenchido nos dados de exemplo. Usado pra ordenar "Mais Rápido"
     /// no carrossel da Wallet.
     let aceleracao0a100: Double?
+    /// Edição especial de preparador (Mansory, Brabus, etc) — nil na maioria
+    /// dos carros. Também não persiste no Supabase ainda.
+    let edicaoEspecial: String?
 
     enum CodingKeys: String, CodingKey {
         case id, modelo, ano, raridade
         case valorEstimadoUsd = "valor_estimado_usd"
         case fotoUrl = "foto_url"
+        case edicaoEspecial = "edicao_especial"
         case createdAt = "created_at"
         case aceleracao0a100 = "aceleracao_0_100"
     }
