@@ -81,6 +81,20 @@ struct WalletView: View {
             }
             .padding(.top, Theme.Spacing.xs)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(alignment: .topTrailing) {
+            // Enfeite puramente decorativo — roda em wireframe quase
+            // transparente, sangrando pra fora da tela no canto superior
+            // direito, no mesmo espírito do globo em apps de catalogação.
+            Image("WalletWheelDecor")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 260, height: 260)
+                .opacity(0.18)
+                .offset(x: 70, y: -40)
+                .allowsHitTesting(false)
+        }
+        .clipped()
     }
 
     private func statBlock(value: String, label: String) -> some View {
