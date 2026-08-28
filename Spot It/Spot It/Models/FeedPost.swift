@@ -11,6 +11,7 @@ struct FeedPost: Identifiable {
     let timeAgo: String
     let photoGradient: [Color]
     let raridade: Int
+    let isFollowing: Bool
     let valorEstimadoUsd: Double
     let likedByUsername: String
     let caption: String
@@ -30,6 +31,7 @@ struct FeedPost: Identifiable {
             timeAgo: "há 2h",
             photoGradient: [Color(red: 0.23, green: 0.16, blue: 0.02), Color(red: 0.06, green: 0.04, blue: 0.01)],
             raridade: 10,
+            isFollowing: false,
             valorEstimadoUsd: 2_700_000,
             likedByUsername: "dudda.cars",
             caption: "achei no meio do posto tarde da noite, não acreditei 😭",
@@ -46,6 +48,7 @@ struct FeedPost: Identifiable {
             timeAgo: "há 5h",
             photoGradient: [Color(red: 0.14, green: 0.06, blue: 0.19), Color(red: 0.04, green: 0.03, blue: 0.06)],
             raridade: 8,
+            isFollowing: false,
             valorEstimadoUsd: 223_000,
             likedByUsername: "lu.exotics",
             caption: "track day pack completo, aquele wing gigante",
@@ -62,6 +65,7 @@ struct FeedPost: Identifiable {
             timeAgo: "há 1d",
             photoGradient: [Color(red: 0.05, green: 0.12, blue: 0.2), Color(red: 0.02, green: 0.04, blue: 0.07)],
             raridade: 5,
+            isFollowing: true,
             valorEstimadoUsd: 78_500,
             likedByUsername: "victorferro",
             caption: "Isle of Man Green fica melhor pessoalmente",
@@ -71,4 +75,43 @@ struct FeedPost: Identifiable {
             fatoInteressante: "A cor Isle of Man Green é uma homenagem ao M3 original dos anos 90."
         ),
     ]
+}
+
+extension WalletItem {
+    /// Converte um post do feed pra abrir a mesma CarDetailPageView usada na Wallet.
+    /// Campos que o feed não tem (specs avançadas, série, interior) ficam nil —
+    /// a página já trata seções opcionais como ausentes.
+    init(feedPost post: FeedPost) {
+        self.init(modelo: post.modelo, ano: post.ano, raridade: post.raridade, valorEstimadoUsd: post.valorEstimadoUsd, motor: post.motor, fatoInteressante: post.fatoInteressante)
+    }
+
+    /// Init "raso" usado por qualquer tela que só tem os dados básicos do
+    /// carro (feed, mapa) e quer abrir a mesma CarDetailPageView da Wallet.
+    init(modelo: String, ano: Int, raridade: Int, valorEstimadoUsd: Double, motor: String, fatoInteressante: String) {
+        id = UUID()
+        self.modelo = modelo
+        self.ano = ano
+        self.raridade = raridade
+        self.valorEstimadoUsd = valorEstimadoUsd
+        fotoUrl = ""
+        createdAt = Date()
+        self.motor = motor
+        potenciaCv = nil
+        aceleracao0a100 = nil
+        velocidadeMaximaKmh = nil
+        pesoKg = nil
+        producaoTotal = nil
+        analiseRaridade = nil
+        analiseMercado = fatoInteressante
+        serie = nil
+        edicaoEspecial = nil
+        varianteMaisRara = nil
+        entreEixosMm = nil
+        comprimentoMm = nil
+        composicao = nil
+        designer = nil
+        materialBancos = nil
+        materialVolante = nil
+        interiorDestaque = nil
+    }
 }

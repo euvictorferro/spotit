@@ -30,6 +30,16 @@ struct DMView: View {
                 .listStyle(.plain)
             }
             .padding(.horizontal, Theme.Spacing.md)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Text("Spot It").font(.headline)
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    NavigationLink(destination: MapView(scope: .feed)) {
+                        Image(systemName: "map")
+                    }
+                }
+            }
         }
     }
 
@@ -91,6 +101,7 @@ struct ChatThreadView: View {
     @Binding var conversation: DMConversation
     @State private var draft = ""
     @EnvironmentObject private var captureButtonVisibility: CaptureButtonVisibility
+    @FocusState private var isDraftFocused: Bool
 
     var body: some View {
         VStack(spacing: 0) {
@@ -125,11 +136,14 @@ struct ChatThreadView: View {
                 }
                 .padding(Theme.Spacing.md)
             }
+            .scrollDismissesKeyboard(.interactively)
+            .onTapGesture { isDraftFocused = false }
 
             Divider()
 
             HStack(spacing: Theme.Spacing.sm) {
                 TextField("Mensagem...", text: $draft)
+                    .focused($isDraftFocused)
                     .padding(.horizontal, Theme.Spacing.md)
                     .padding(.vertical, Theme.Spacing.sm)
                     .background(Color(.secondarySystemBackground), in: Capsule())
@@ -148,7 +162,10 @@ struct ChatThreadView: View {
         .navigationTitle(conversation.username)
         .navigationBarTitleDisplayMode(.inline)
         .onAppear { captureButtonVisibility.isHidden = true }
-        .onDisappear { captureButtonVisibility.isHidden = false }
+        .onDisappear {
+            captureButtonVisibility.isHidden = false
+            isDraftFocused = false
+        }
     }
 
     private func send() {

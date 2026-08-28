@@ -20,7 +20,6 @@ struct FeedPostCard: View {
             photo
                 .aspectRatio(4 / 5, contentMode: .fit)
                 .clipShape(RoundedRectangle(cornerRadius: Theme.cornerRadius))
-                .rarityPhotoBorder(post.raridade)
                 .overlay(alignment: .topTrailing) {
                     valueChip
                 }
@@ -35,7 +34,7 @@ struct FeedPostCard: View {
                 .font(.footnote)
         }
         .sheet(isPresented: $showDetails) {
-            CarDetailSheet(post: post)
+            CarDetailPageView(item: WalletItem(feedPost: post))
         }
         .sheet(isPresented: $showComments) {
             CommentsSheet(post: post, comments: $comments)
@@ -44,16 +43,29 @@ struct FeedPostCard: View {
 
     private var header: some View {
         HStack(spacing: Theme.Spacing.sm) {
-            Circle()
-                .fill(LinearGradient(colors: post.avatarColors, startPoint: .topLeading, endPoint: .bottomTrailing))
-                .frame(width: 30, height: 30)
-                .overlay(Text(post.avatarInitials).font(.caption2).fontWeight(.bold).foregroundStyle(.white))
+            NavigationLink {
+                UserProfileView(username: post.username, avatarInitials: post.avatarInitials, avatarColors: post.avatarColors)
+            } label: {
+                HStack(spacing: Theme.Spacing.sm) {
+                    Circle()
+                        .fill(LinearGradient(colors: post.avatarColors, startPoint: .topLeading, endPoint: .bottomTrailing))
+                        .frame(width: 30, height: 30)
+                        .overlay(Text(post.avatarInitials).font(.caption2).fontWeight(.bold).foregroundStyle(.white))
 
-            VStack(alignment: .leading, spacing: 1) {
-                Text(post.username).font(.subheadline).fontWeight(.semibold)
-                Text("\(post.location) · \(post.timeAgo)")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(post.username).font(.subheadline).fontWeight(.semibold)
+                        Text("\(post.location) · \(post.timeAgo)")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+            .buttonStyle(.plain)
+
+            Spacer()
+
+            if !post.isFollowing {
+                FollowButton()
             }
         }
     }
@@ -110,81 +122,33 @@ struct FeedPostCard: View {
     }
 }
 
-/// Aberta ao tocar no ícone de info — mostra o que sumiu do card do feed
-/// (modelo, ano, motor, raridade, fato interessante). Visual discreto de
-/// propósito: sem glow, o card do feed já chama atenção o suficiente.
-struct CarDetailSheet: View {
-    let post: FeedPost
-    @Environment(\.dismiss) private var dismiss
-
-    private var rarityLabel: String {
-        switch post.raridade {
-        case ...3: return "Comum"
-        case 4...6: return "Incomum"
-        case 7...8: return "Raro"
-        default: return "Lendário"
-        }
-    }
+/// Botão "Seguir" → "Seguindo" com estado local — só aparece nos posts de
+/// quem ainda não segue (post.isFollowing == false).
+private struct FollowButton: View {
+    @State private var isFollowing = false
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(post.modelo).font(.title3).bold()
-                        HStack(spacing: 6) {
-                            Circle()
-                                .fill(Theme.rarityColor(post.raridade))
-                                .frame(width: 7, height: 7)
-                            Text("\(rarityLabel) · \(post.raridade)/10")
-                                .font(.footnote).fontWeight(.semibold)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-
-                    Divider()
-
-                    VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-                        DetailRow(label: "Ano", value: "\(post.ano)")
-                        DetailRow(label: "Motor", value: post.motor)
-                        DetailRow(label: "Valor estimado", value: post.valorEstimadoUsd.asDollars)
-                    }
-
-                    Divider()
-
-                    Text(post.fatoInteressante)
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                }
-                .padding(Theme.Spacing.md)
-            }
-            .navigationTitle("Detalhes do carro")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Fechar") { dismiss() }
-                }
-            }
+        Button {
+            isFollowing.toggle()
+        } label: {
+            Text(isFollowing ? "Seguindo" : "Seguir")
+                .font(.caption)
+                .fontWeight(.semibold)
+                .padding(.horizontal, Theme.Spacing.sm)
+                .padding(.vertical, 6)
+                .background(
+                    isFollowing ? Color(.secondarySystemBackground) : Color.accentColor,
+                    in: Capsule()
+                )
+                .foregroundStyle(isFollowing ? Color.primary : Color.white)
         }
-        .presentationDetents([.medium])
-    }
-}
-
-private struct DetailRow: View {
-    let label: String
-    let value: String
-
-    var body: some View {
-        HStack {
-            Text(label).foregroundStyle(.secondary)
-            Spacer()
-            Text(value).fontWeight(.medium)
-        }
-        .font(.subheadline)
+        .buttonStyle(.plain)
     }
 }
 
 #Preview {
-    FeedPostCard(post: FeedPost.sample[0])
-        .padding()
+    NavigationStack {
+        FeedPostCard(post: FeedPost.sample[0])
+            .padding()
+    }
 }

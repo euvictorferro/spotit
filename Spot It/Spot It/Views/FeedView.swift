@@ -12,6 +12,9 @@ struct FeedView: View {
                 .padding(Theme.Spacing.md)
             }
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Text("Spot It").font(.headline)
+                }
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     NavigationLink(destination: MapView(scope: .feed)) {
                         Image(systemName: "globe")

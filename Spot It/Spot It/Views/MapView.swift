@@ -13,6 +13,7 @@ struct MapView: View {
     @State private var position: MapCameraPosition = .region(
         MKCoordinateRegion(center: .init(latitude: 26.14, longitude: -81.79), span: .init(latitudeDelta: 0.6, longitudeDelta: 0.6))
     )
+    @State private var detailItem: WalletItem?
 
     private var spots: [CarSpot] {
         scope == .wallet ? CarSpot.sample.filter(\.isMine) : CarSpot.sample
@@ -21,8 +22,16 @@ struct MapView: View {
     var body: some View {
         Map(position: $position) {
             ForEach(spots) { spot in
-                Marker(spot.modelo, systemImage: "car.fill", coordinate: spot.coordinate)
-                    .tint(spot.isMine ? Color.accentColor : .blue)
+                Annotation(spot.modelo, coordinate: spot.coordinate) {
+                    Button {
+                        detailItem = spot.detail
+                    } label: {
+                        Image(systemName: "car.fill")
+                            .foregroundStyle(.white)
+                            .padding(8)
+                            .background(spot.isMine ? Color.accentColor : .blue, in: Circle())
+                    }
+                }
             }
         }
         .navigationTitle("Mapa")
@@ -34,6 +43,9 @@ struct MapView: View {
                 .padding(.vertical, Theme.Spacing.sm)
                 .background(.thinMaterial, in: Capsule())
                 .padding(.bottom, Theme.Spacing.lg)
+        }
+        .sheet(item: $detailItem) { item in
+            CarDetailPageView(item: item)
         }
     }
 }

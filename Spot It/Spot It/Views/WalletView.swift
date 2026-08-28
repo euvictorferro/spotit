@@ -38,6 +38,9 @@ struct WalletView: View {
                 .padding(Theme.Spacing.md)
             }
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Text("Spot It").font(.headline)
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     NavigationLink(destination: MapView(scope: .wallet)) {
                         Image(systemName: "map")
