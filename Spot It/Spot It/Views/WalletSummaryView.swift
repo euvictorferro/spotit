@@ -66,7 +66,7 @@ struct WalletSummaryView: View {
 
             sectionHeader("Suas Coleções Oficiais")
             if let first = sets.first {
-                SetCard(brand: first.brand, info: first.info, count: first.items.count, totalValue: first.items.reduce(0) { $0 + $1.valorEstimadoUsd })
+                SetCard(brand: first.brand, info: first.info, items: first.items, totalValue: first.items.reduce(0) { $0 + $1.valorEstimadoUsd })
             }
         }
         .sheet(isPresented: $showFeedback) { FeedbackSheet() }
@@ -215,14 +215,23 @@ private struct GeographicDistributionView: View {
 struct SetCard: View {
     let brand: String
     let info: CarBrandInfo
-    let count: Int
+    let items: [WalletItem]
     let totalValue: Double
+
+    private var count: Int { items.count }
 
     private var progress: Double {
         min(Double(count) / Double(info.knownModels), 1)
     }
 
     var body: some View {
+        NavigationLink(destination: SetDetailView(brand: brand, info: info, items: items)) {
+            cardContent
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var cardContent: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
             BrandLogoBadge(brand: brand)
                 .frame(height: 100)
