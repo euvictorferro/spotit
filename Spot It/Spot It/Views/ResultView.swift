@@ -27,7 +27,7 @@ struct ResultView: View {
                             if let analiseMercado = carInfo.analiseMercado {
                                 paragraphSection(title: "Mercado e Valorização", text: analiseMercado)
                             }
-                            feedbackPrompt(question: "Esse valor te parece razoável?", answer: $valueFeedback)
+                            FeedbackPromptView(question: "Esse valor te parece razoável?", answer: $valueFeedback)
 
                             Divider()
                             detailsSection
@@ -48,7 +48,7 @@ struct ResultView: View {
                             }
 
                             Divider()
-                            feedbackPrompt(question: "Encontrou o que procurava?", answer: $infoFeedback)
+                            FeedbackPromptView(question: "Encontrou o que procurava?", answer: $infoFeedback)
 
                             if let saveError {
                                 Text(saveError).font(.footnote).foregroundStyle(.red)
@@ -129,31 +129,6 @@ struct ResultView: View {
         }
     }
 
-    // MARK: - Feedback
-
-    private func feedbackPrompt(question: String, answer: Binding<Bool?>) -> some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-            Text(question).font(.subheadline).fontWeight(.medium)
-            HStack(spacing: Theme.Spacing.sm) {
-                feedbackButton(icon: "hand.thumbsup", isSelected: answer.wrappedValue == true) {
-                    answer.wrappedValue = true
-                }
-                feedbackButton(icon: "hand.thumbsdown", isSelected: answer.wrappedValue == false) {
-                    answer.wrappedValue = false
-                }
-            }
-        }
-    }
-
-    private func feedbackButton(icon: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: icon)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, Theme.Spacing.sm)
-        }
-        .buttonStyle(.bordered)
-        .tint(isSelected ? Color.accentColor : .secondary)
-    }
 
     // MARK: - Details
 
@@ -179,7 +154,7 @@ struct ResultView: View {
 
     // MARK: - Variante especial
 
-    private func varianteSection(_ variante: CarInfo.VarianteEspecial) -> some View {
+    private func varianteSection(_ variante: CarInfo.VarianteCarro) -> some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
             Text("Variante Especial").font(.headline)
             VStack(spacing: Theme.Spacing.sm) {

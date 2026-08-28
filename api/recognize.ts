@@ -42,7 +42,24 @@ Responda SOMENTE com um JSON válido, sem markdown, no formato:
     "ano": number,
     "valor_estimado_usd": number,
     "descricao": string (1-2 frases)
-  } ou null (só preenche se existir uma variante/edição especial real e notável desse modelo)
+  } ou null (só preenche se existir uma variante/edição especial real e notável desse modelo),
+
+  "serie": string ou null (a linha/submarca de performance dentro do modelo, ex: "AMG", "GT3", "STO", "M", "Nismo" — só a parte do nome que representa essa linha),
+  "variante_mais_rara": {
+    "nome": string (uma versão AINDA mais rara/extrema desse carro — ex: preparação de um tuner famoso tipo Mansory, Brabus, Liberty Walk, ou uma edição limitadíssima),
+    "ano": number,
+    "valor_estimado_usd": number,
+    "descricao": string (1-2 frases explicando o que torna essa versão mais extrema)
+  } ou null,
+
+  "entre_eixos_mm": number ou null,
+  "comprimento_mm": number ou null,
+  "composicao": string ou null (materiais estruturais notáveis, ex: "Monocoque em fibra de carbono, painéis em alumínio"),
+  "designer": string ou null (nome do designer ou estúdio de design responsável, se conhecido),
+
+  "material_bancos": string ou null,
+  "material_volante": string ou null,
+  "interior_destaque": string ou null (1-2 frases sobre tecnologia/detalhe marcante do interior)
 }
 Se a foto não mostrar um carro raro/exótico claramente identificável (ex: carro popular comum como Corolla, Civic, foto não é de carro), responda { "reconhecido": false }.
 Todos os campos numéricos/texto além dos 7 primeiros são opcionais — use null quando não tiver certeza, nunca invente números.`;

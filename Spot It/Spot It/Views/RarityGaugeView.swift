@@ -5,18 +5,9 @@ import SwiftUI
 struct RarityGaugeView: View {
     let raridade: Int
 
-    private var label: String {
-        switch raridade {
-        case ...3: return "Comum"
-        case 4...6: return "Incomum"
-        case 7...8: return "Raro"
-        default: return "Lendário"
-        }
-    }
-
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-            Text(label)
+            Text(Theme.rarityLabel(raridade))
                 .font(.headline)
                 .foregroundStyle(Theme.rarityColor(raridade))
 

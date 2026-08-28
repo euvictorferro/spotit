@@ -28,6 +28,18 @@ enum Theme {
     static func rarityGlow(_ raridade: Int) -> CGFloat {
         raridade >= 9 ? 6 : (raridade >= 7 ? 4 : 0)
     }
+
+    /// Rótulo de raridade pra headline da página de detalhe do carro.
+    static func rarityLabel(_ raridade: Int) -> String {
+        switch raridade {
+        case ...2: return "Super Comum"
+        case 3...4: return "Comum"
+        case 5...6: return "Incomum"
+        case 7...8: return "Raro"
+        case 9: return "Muito Raro"
+        default: return "Lendário"
+        }
+    }
 }
 
 extension Double {

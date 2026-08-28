@@ -22,9 +22,21 @@ struct CarInfo: Codable {
     let designExterior: String?
     let designInterior: String?
 
-    let varianteEspecial: VarianteEspecial?
+    let varianteEspecial: VarianteCarro?
 
-    struct VarianteEspecial: Codable {
+    let serie: String?
+    let varianteMaisRara: VarianteCarro?
+
+    let entreEixosMm: Int?
+    let comprimentoMm: Int?
+    let composicao: String?
+    let designer: String?
+
+    let materialBancos: String?
+    let materialVolante: String?
+    let interiorDestaque: String?
+
+    struct VarianteCarro: Codable {
         let nome: String
         let ano: Int
         let valorEstimadoUsd: Double
@@ -56,5 +68,14 @@ struct CarInfo: Codable {
         case designExterior = "design_exterior"
         case designInterior = "design_interior"
         case varianteEspecial = "variante_especial"
+        case serie
+        case varianteMaisRara = "variante_mais_rara"
+        case entreEixosMm = "entre_eixos_mm"
+        case comprimentoMm = "comprimento_mm"
+        case composicao
+        case designer
+        case materialBancos = "material_bancos"
+        case materialVolante = "material_volante"
+        case interiorDestaque = "interior_destaque"
     }
 }
