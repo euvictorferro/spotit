@@ -61,7 +61,7 @@ Responda SOMENTE com um JSON válido, sem markdown, no formato:
   "material_volante": string ou null,
   "interior_destaque": string ou null (1-2 frases sobre tecnologia/detalhe marcante do interior)
 }
-Se a foto não mostrar um carro raro/exótico claramente identificável (ex: carro popular comum como Corolla, Civic, foto não é de carro), responda { "reconhecido": false }.
+Faça sua melhor estimativa mesmo se não tiver 100% de certeza da variante exata (ex: confundir STO com EVO) — responda com o modelo mais provável, não recuse por incerteza de detalhe. Só responda { "reconhecido": false } se a foto claramente não for de um carro raro/exótico (ex: carro popular comum como Corolla, Civic, ou a foto não é de um carro).
 Todos os campos numéricos/texto além dos 7 primeiros são opcionais — use null quando não tiver certeza, nunca invente números.`;
 
 export default async function handler(req: Req, res: Res) {
