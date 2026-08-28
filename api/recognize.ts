@@ -2,7 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 
 interface Req {
   method?: string;
-  body?: { imageBase64?: string };
+  body?: { imageBase64?: string; images?: string[] };
 }
 interface Res {
   status(code: number): Res;
@@ -61,7 +61,7 @@ Responda SOMENTE com um JSON válido, sem markdown, no formato:
   "material_volante": string ou null,
   "interior_destaque": string ou null (1-2 frases sobre tecnologia/detalhe marcante do interior)
 }
-Faça sua melhor estimativa mesmo se não tiver 100% de certeza da variante exata (ex: confundir STO com EVO) — responda com o modelo mais provável, não recuse por incerteza de detalhe. Só responda { "reconhecido": false } se a foto claramente não for de um carro raro/exótico (ex: carro popular comum como Corolla, Civic, ou a foto não é de um carro).
+Faça sua melhor estimativa mesmo se não tiver 100% de certeza da variante exata (ex: confundir STO com EVO) — responda com o modelo mais provável, não recuse por incerteza de detalhe. Se receber mais de uma foto, são ângulos diferentes do mesmo carro — combine as pistas de todas (crachás, silhueta, faróis) antes de decidir. Só responda { "reconhecido": false } se a foto claramente não for de um carro raro/exótico (ex: carro popular comum como Corolla, Civic, ou a foto não é de um carro).
 Todos os campos numéricos/texto além dos 7 primeiros são opcionais — use null quando não tiver certeza, nunca invente números.`;
 
 export default async function handler(req: Req, res: Res) {
@@ -70,11 +70,16 @@ export default async function handler(req: Req, res: Res) {
     return;
   }
 
-  const { imageBase64 } = req.body ?? {};
-  if (!imageBase64) {
-    res.status(400).json({ error: 'imageBase64 obrigatório' });
+  const { imageBase64, images } = req.body ?? {};
+  const allImages = images?.length ? images : imageBase64 ? [imageBase64] : [];
+  if (!allImages.length) {
+    res.status(400).json({ error: 'imageBase64 ou images obrigatório' });
     return;
   }
+
+  const promptText = allImages.length > 1
+    ? `Identifique o carro — estas ${allImages.length} fotos são ângulos diferentes do mesmo veículo, use todas juntas.`
+    : 'Identifique o carro nesta foto.';
 
   const message = await anthropic.messages.create({
     model: 'claude-sonnet-4-5',
@@ -84,8 +89,11 @@ export default async function handler(req: Req, res: Res) {
       {
         role: 'user',
         content: [
-          { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: imageBase64 } },
-          { type: 'text', text: 'Identifique o carro nesta foto.' },
+          ...allImages.map((data) => ({
+            type: 'image' as const,
+            source: { type: 'base64' as const, media_type: 'image/jpeg' as const, data },
+          })),
+          { type: 'text', text: promptText },
         ],
       },
     ],

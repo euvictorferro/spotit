@@ -10,9 +10,13 @@ import Combine
 struct CaptureView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var capturedImage: UIImage?
+    /// Todas as fotos já tiradas nesta tentativa — normalmente 1; ganha uma
+    /// 2ª quando o reconhecimento falha e o usuário manda outro ângulo.
+    @State private var capturedImages: [UIImage] = []
     @State private var carInfo: CarInfo?
     @State private var isLoading = false
     @State private var errorMessage: String?
+    @State private var isRetryingAngle = false
     #if DEBUG
     @State private var debugPickerItem: PhotosPickerItem?
     #endif
@@ -21,8 +25,8 @@ struct CaptureView: View {
         ZStack {
             Color.black.ignoresSafeArea()
 
-            if let capturedImage {
-                scanningView(capturedImage)
+            if let lastImage = capturedImages.last, !isRetryingAngle {
+                scanningView(lastImage)
             } else {
                 CameraPicker(image: $capturedImage, onCancel: { dismiss() })
                     .ignoresSafeArea()
@@ -34,7 +38,9 @@ struct CaptureView: View {
         }
         .onChange(of: capturedImage) { _, newImage in
             guard let newImage else { return }
-            Task { await recognize(newImage) }
+            capturedImages.append(newImage)
+            isRetryingAngle = false
+            Task { await recognize() }
         }
         .sheet(item: $carInfo, onDismiss: retake) { info in
             ResultView(carInfo: info, image: capturedImage, onFinish: { dismiss() })
@@ -91,8 +97,14 @@ struct CaptureView: View {
                             .font(.subheadline)
                             .foregroundStyle(.white)
                             .multilineTextAlignment(.center)
-                        Button("Tentar de novo") { retake() }
-                            .buttonStyle(.borderedProminent)
+                        HStack {
+                            if capturedImages.count == 1 {
+                                Button("Tentar outro ângulo") { retryAngle() }
+                                    .buttonStyle(.borderedProminent)
+                            }
+                            Button("Recomeçar") { retake() }
+                                .buttonStyle(.bordered)
+                        }
                     } else {
                         Text("Identificando o carro...")
                             .font(.subheadline).fontWeight(.semibold)
@@ -108,16 +120,27 @@ struct CaptureView: View {
 
     private func retake() {
         capturedImage = nil
+        capturedImages = []
         carInfo = nil
         errorMessage = nil
+        isRetryingAngle = false
     }
 
-    private func recognize(_ image: UIImage) async {
-        guard let data = image.resizedForUpload().jpegData(compressionQuality: 0.6) else { return }
+    /// Não descarta a 1ª foto — reabre a câmera pra capturar um 2º ângulo e
+    /// reenviar as duas juntas, sem reiniciar o fluxo do zero.
+    private func retryAngle() {
+        capturedImage = nil
+        errorMessage = nil
+        isRetryingAngle = true
+    }
+
+    private func recognize() async {
+        let datas = capturedImages.compactMap { $0.resizedForUpload().jpegData(compressionQuality: 0.6) }
+        guard !datas.isEmpty else { return }
         isLoading = true
         errorMessage = nil
         do {
-            carInfo = try await RecognizeService.recognize(imageData: data)
+            carInfo = try await RecognizeService.recognize(imagesData: datas)
         } catch {
             errorMessage = "Não foi possível identificar o carro. Tenta de novo."
         }
