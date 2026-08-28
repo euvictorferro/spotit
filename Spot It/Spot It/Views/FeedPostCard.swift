@@ -33,7 +33,7 @@ struct FeedPostCard: View {
             (Text(post.username).fontWeight(.semibold) + Text(" " + post.caption))
                 .font(.footnote)
         }
-        .sheet(isPresented: $showDetails) {
+        .fullScreenCover(isPresented: $showDetails) {
             CarDetailPageView(item: WalletItem(feedPost: post))
         }
         .sheet(isPresented: $showComments) {
@@ -97,7 +97,13 @@ struct FeedPostCard: View {
             Button {
                 showComments = true
             } label: {
-                MessageCircleIcon.icon(size: 20)
+                HStack(spacing: 4) {
+                    MessageCircleIcon.icon(size: 20)
+                    if !comments.isEmpty {
+                        Text(comments.count.formattedCount)
+                            .font(.subheadline)
+                    }
+                }
             }
 
             ShareLink(item: shareText) {

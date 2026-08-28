@@ -33,7 +33,7 @@ struct SetDetailView: View {
         }
         .navigationTitle(brand)
         .navigationBarTitleDisplayMode(.inline)
-        .sheet(item: $detailItem) { item in
+        .fullScreenCover(item: $detailItem) { item in
             CarDetailPageView(item: item)
         }
     }

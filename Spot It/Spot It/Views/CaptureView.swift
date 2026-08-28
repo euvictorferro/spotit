@@ -1,43 +1,115 @@
 import SwiftUI
 import UIKit
+import AVFoundation
+import PhotosUI
+import Combine
 
+/// Fluxo de captura: abre a câmera custom direto (sem tela intermediária),
+/// tira a foto, mostra ela com uma animação de "escaneando" enquanto a IA
+/// identifica o carro, e então abre o resultado.
 struct CaptureView: View {
-    @State private var showCamera = false
+    @Environment(\.dismiss) private var dismiss
     @State private var capturedImage: UIImage?
     @State private var carInfo: CarInfo?
     @State private var isLoading = false
     @State private var errorMessage: String?
+    #if DEBUG
+    @State private var debugPickerItem: PhotosPickerItem?
+    #endif
 
     var body: some View {
-        VStack(spacing: Theme.Spacing.lg) {
-            if isLoading {
-                ProgressView("Identificando o carro...")
-            } else {
-                Button("Tirar foto") {
-                    showCamera = true
-                }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-            }
+        ZStack {
+            Color.black.ignoresSafeArea()
 
-            if let errorMessage {
-                Text(errorMessage)
-                    .font(.footnote)
-                    .foregroundStyle(.red)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, Theme.Spacing.lg)
+            if let capturedImage {
+                scanningView(capturedImage)
+            } else {
+                CameraPicker(image: $capturedImage, onCancel: { dismiss() })
+                    .ignoresSafeArea()
+
+                #if DEBUG
+                debugGalleryButton
+                #endif
             }
-        }
-        .sheet(isPresented: $showCamera) {
-            CameraPicker(image: $capturedImage)
         }
         .onChange(of: capturedImage) { _, newImage in
             guard let newImage else { return }
             Task { await recognize(newImage) }
         }
-        .sheet(item: $carInfo) { info in
-            ResultView(carInfo: info, image: capturedImage)
+        .sheet(item: $carInfo, onDismiss: retake) { info in
+            ResultView(carInfo: info, image: capturedImage, onFinish: { dismiss() })
         }
+        .preferredColorScheme(.dark)
+    }
+
+    #if DEBUG
+    /// Só em build de debug — Simulador não tem câmera, isso permite testar
+    /// a animação de scanning com uma foto qualquer da galeria. Some no
+    /// build de release: usuário final não tem upload, só captura ao vivo.
+    private var debugGalleryButton: some View {
+        VStack {
+            Spacer()
+            HStack {
+                PhotosPicker(selection: $debugPickerItem, matching: .images) {
+                    Image(systemName: "ladybug.fill")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 36, height: 36)
+                        .background(.black.opacity(0.35), in: Circle())
+                }
+                Spacer()
+            }
+            .padding(.horizontal, Theme.Spacing.md)
+            .padding(.bottom, 130)
+        }
+        .onChange(of: debugPickerItem) { _, newItem in
+            Task {
+                guard let data = try? await newItem?.loadTransferable(type: Data.self),
+                      let image = UIImage(data: data) else { return }
+                capturedImage = image
+            }
+        }
+    }
+    #endif
+
+    private func scanningView(_ image: UIImage) -> some View {
+        ZStack {
+            Image(uiImage: image)
+                .resizable()
+                .scaledToFill()
+                .ignoresSafeArea()
+
+            if isLoading {
+                ScanningOverlay()
+            }
+
+            VStack {
+                Spacer()
+                VStack(spacing: Theme.Spacing.sm) {
+                    if let errorMessage {
+                        Text(errorMessage)
+                            .font(.subheadline)
+                            .foregroundStyle(.white)
+                            .multilineTextAlignment(.center)
+                        Button("Tentar de novo") { retake() }
+                            .buttonStyle(.borderedProminent)
+                    } else {
+                        Text("Identificando o carro...")
+                            .font(.subheadline).fontWeight(.semibold)
+                            .foregroundStyle(.white)
+                    }
+                }
+                .padding(Theme.Spacing.lg)
+                .frame(maxWidth: .infinity)
+                .background(.black.opacity(0.55))
+            }
+        }
+    }
+
+    private func retake() {
+        capturedImage = nil
+        carInfo = nil
+        errorMessage = nil
     }
 
     private func recognize(_ image: UIImage) async {
@@ -53,29 +125,86 @@ struct CaptureView: View {
     }
 }
 
-struct CameraPicker: UIViewControllerRepresentable {
-    @Binding var image: UIImage?
-    @Environment(\.dismiss) private var dismiss
+/// Animação de "escaneando" sobre a foto capturada — mistura grade de radar
+/// (malha + varredura + pontos de leitura acendendo) com um contorno de
+/// moldura sendo traçado, como se a IA estivesse lendo a imagem de verdade.
+private struct ScanningOverlay: View {
+    @State private var sweepDown = false
+    @State private var traceProgress: CGFloat = 0
+    @State private var dotsOn = false
 
-    func makeUIViewController(context: Context) -> UIImagePickerController {
-        let picker = UIImagePickerController()
-        picker.sourceType = .camera
-        picker.delegate = context.coordinator
-        return picker
-    }
+    private let dotPositions: [UnitPoint] = [
+        .init(x: 0.3, y: 0.38), .init(x: 0.62, y: 0.55),
+        .init(x: 0.45, y: 0.7), .init(x: 0.78, y: 0.45),
+    ]
 
-    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
+    var body: some View {
+        GeometryReader { geo in
+            ZStack {
+                GridLines()
+                    .stroke(Color.accentColor.opacity(0.25), lineWidth: 1)
 
-    func makeCoordinator() -> Coordinator { Coordinator(self) }
+                Rectangle()
+                    .fill(
+                        LinearGradient(
+                            colors: [.clear, Color.accentColor.opacity(0.7), .clear],
+                            startPoint: .top, endPoint: .bottom
+                        )
+                    )
+                    .frame(height: 120)
+                    .offset(y: sweepDown ? geo.size.height : -120)
+                    .animation(.easeInOut(duration: 2.2).repeatForever(autoreverses: false), value: sweepDown)
 
-    class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
-        let parent: CameraPicker
-        init(_ parent: CameraPicker) { self.parent = parent }
+                ForEach(0..<dotPositions.count, id: \.self) { i in
+                    Circle()
+                        .fill(Color.accentColor)
+                        .frame(width: 6, height: 6)
+                        .shadow(color: Color.accentColor, radius: 4)
+                        .opacity(dotsOn ? 1 : 0)
+                        .scaleEffect(dotsOn ? 1 : 0.4)
+                        .position(x: geo.size.width * dotPositions[i].x, y: geo.size.height * dotPositions[i].y)
+                        .animation(
+                            .easeInOut(duration: 0.9).repeatForever(autoreverses: true).delay(Double(i) * 0.4),
+                            value: dotsOn
+                        )
+                }
 
-        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
-            parent.image = info[.originalImage] as? UIImage
-            parent.dismiss()
+                ScanFrame()
+                    .trim(from: 0, to: traceProgress)
+                    .stroke(Color.accentColor, style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
+                    .shadow(color: Color.accentColor, radius: 6)
+                    .padding(28)
+            }
         }
+        .ignoresSafeArea()
+        .onAppear {
+            sweepDown = true
+            dotsOn = true
+            withAnimation(.easeInOut(duration: 2.4).repeatForever(autoreverses: true)) {
+                traceProgress = 1
+            }
+        }
+    }
+}
+
+/// Malha fina de fundo — parte do efeito "grade de radar".
+private struct GridLines: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        let step: CGFloat = 32
+        var x: CGFloat = 0
+        while x <= rect.width { path.move(to: .init(x: x, y: 0)); path.addLine(to: .init(x: x, y: rect.height)); x += step }
+        var y: CGFloat = 0
+        while y <= rect.height { path.move(to: .init(x: 0, y: y)); path.addLine(to: .init(x: rect.width, y: y)); y += step }
+        return path
+    }
+}
+
+/// Moldura arredondada que é "traçada" (trim animado) por cima da foto —
+/// sugere a IA reconhecendo os limites do carro.
+private struct ScanFrame: Shape {
+    func path(in rect: CGRect) -> Path {
+        Path(roundedRect: rect, cornerRadius: 24)
     }
 }
 
@@ -84,14 +213,225 @@ extension CarInfo: Identifiable {
 }
 
 extension UIImage {
-    /// Redimensiona pra um lado máximo de 1024px — fotos da câmera em resolução
-    /// total (12MP+) geram payload grande demais pro endpoint de reconhecimento.
-    func resizedForUpload(maxDimension: CGFloat = 1024) -> UIImage {
+    /// Redimensiona pra um lado máximo de 1568px (ponto ideal de visão da
+    /// Anthropic — acima disso a imagem só é reamostrada de novo do lado
+    /// deles) — fotos da câmera em resolução total (12MP+) geram payload
+    /// grande demais, mas cortar mais que isso perde detalhe (crachás,
+    /// texto) que ajuda a reconhecer variantes específicas.
+    func resizedForUpload(maxDimension: CGFloat = 1568) -> UIImage {
         let largestSide = max(size.width, size.height)
         guard largestSide > maxDimension else { return self }
         let scale = maxDimension / largestSide
         let newSize = CGSize(width: size.width * scale, height: size.height * scale)
         let renderer = UIGraphicsImageRenderer(size: newSize)
         return renderer.image { _ in draw(in: CGRect(origin: .zero, size: newSize)) }
+    }
+}
+
+// MARK: - Câmera customizada (AVFoundation)
+
+/// Sessão de câmera própria (em vez de UIImagePickerController) — o picker
+/// do sistema deixa uma faixa preta embaixo quando os controles nativos são
+/// escondidos, porque o preview mantém o tamanho/posição original. Com
+/// AVCaptureVideoPreviewLayer + resizeAspectFill controlamos o preview pra
+/// preencher a tela inteira de verdade.
+final class CameraModel: NSObject, ObservableObject {
+    let session = AVCaptureSession()
+    private let output = AVCapturePhotoOutput()
+    private var isConfigured = false
+    private var isFlashOn = false
+    var onCapture: ((UIImage) -> Void)?
+
+    func configureIfNeeded() {
+        guard !isConfigured else { return }
+        isConfigured = true
+
+        AVCaptureDevice.requestAccess(for: .video) { [weak self] granted in
+            guard granted else { return }
+            self?.setUp()
+        }
+    }
+
+    private func setUp() {
+        session.beginConfiguration()
+        session.sessionPreset = .photo
+
+        guard let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
+              let input = try? AVCaptureDeviceInput(device: device),
+              session.canAddInput(input) else {
+            session.commitConfiguration()
+            return
+        }
+        session.addInput(input)
+        if session.canAddOutput(output) { session.addOutput(output) }
+        session.commitConfiguration()
+        start()
+    }
+
+    func start() {
+        guard !session.isRunning else { return }
+        DispatchQueue.global(qos: .userInitiated).async { [session] in session.startRunning() }
+    }
+
+    func stop() {
+        guard session.isRunning else { return }
+        DispatchQueue.global(qos: .userInitiated).async { [session] in session.stopRunning() }
+    }
+
+    func setFlash(_ on: Bool) { isFlashOn = on }
+
+    func capturePhoto() {
+        let settings = AVCapturePhotoSettings()
+        if output.supportedFlashModes.contains(isFlashOn ? .on : .off) {
+            settings.flashMode = isFlashOn ? .on : .off
+        }
+        output.capturePhoto(with: settings, delegate: self)
+    }
+}
+
+extension CameraModel: AVCapturePhotoCaptureDelegate {
+    func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
+        guard error == nil,
+              let data = photo.fileDataRepresentation(),
+              let image = UIImage(data: data) else { return }
+        DispatchQueue.main.async { self.onCapture?(image) }
+    }
+}
+
+private struct CameraPreviewView: UIViewRepresentable {
+    let session: AVCaptureSession
+
+    func makeUIView(context: Context) -> PreviewLayerView {
+        let view = PreviewLayerView()
+        view.videoPreviewLayer.session = session
+        view.videoPreviewLayer.videoGravity = .resizeAspectFill
+        return view
+    }
+
+    func updateUIView(_ uiView: PreviewLayerView, context: Context) {}
+
+    final class PreviewLayerView: UIView {
+        override class var layerClass: AnyClass { AVCaptureVideoPreviewLayer.self }
+        var videoPreviewLayer: AVCaptureVideoPreviewLayer { layer as! AVCaptureVideoPreviewLayer }
+    }
+}
+
+/// Preview de câmera em tela cheia + moldura com cantos, flash, X pra sair
+/// e o obturador — sem ícone de galeria de propósito, o app não aceita
+/// upload de fotos do usuário final, só captura ao vivo.
+struct CameraPicker: View {
+    @Binding var image: UIImage?
+    var onCancel: () -> Void
+
+    @StateObject private var camera = CameraModel()
+    @State private var isFlashOn = false
+
+    var body: some View {
+        ZStack {
+            // A view de preview é só vídeo ao vivo — sem isso, ela às vezes
+            // "rouba" o toque antes de chegar nos botões do overlay por cima.
+            CameraPreviewView(session: camera.session)
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
+
+            CameraOverlayView(
+                onCapture: { camera.capturePhoto() },
+                onToggleFlash: { on in
+                    isFlashOn = on
+                    camera.setFlash(on)
+                },
+                onDismiss: onCancel
+            )
+            .zIndex(1)
+        }
+        .onAppear {
+            camera.onCapture = { image = $0 }
+            camera.configureIfNeeded()
+            camera.start()
+        }
+        .onDisappear { camera.stop() }
+    }
+}
+
+/// Moldura com cantos, botão de flash, X pra sair e o obturador — visual de
+/// referência (câmera dedicada de identificação, sem controles extras).
+private struct CameraOverlayView: View {
+    let onCapture: () -> Void
+    let onToggleFlash: (Bool) -> Void
+    let onDismiss: () -> Void
+    @State private var isFlashOn = false
+
+    var body: some View {
+        GeometryReader { geo in
+            VStack {
+                HStack {
+                    iconButton("xmark", action: onDismiss)
+                    Spacer()
+                    iconButton(isFlashOn ? "bolt.fill" : "bolt.slash.fill") {
+                        isFlashOn.toggle()
+                        onToggleFlash(isFlashOn)
+                    }
+                }
+                .padding(.horizontal, Theme.Spacing.md)
+                // A view ignora a safe area (câmera em tela cheia), então
+                // sem isso os botões ficavam colados na status bar/notch.
+                .padding(.top, geo.safeAreaInsets.top + Theme.Spacing.md)
+
+                Spacer()
+
+                ViewfinderFrame()
+                    .padding(.horizontal, 36)
+                    .frame(height: 260)
+
+                Spacer()
+
+                Button(action: onCapture) {
+                    Circle()
+                        .stroke(.white, lineWidth: 4)
+                        .frame(width: 74, height: 74)
+                        .overlay(Circle().fill(.white).frame(width: 62, height: 62))
+                }
+                .buttonStyle(.plain)
+                .contentShape(Circle())
+                .padding(.bottom, 40)
+            }
+        }
+    }
+
+    private func iconButton(_ systemImage: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: 36, height: 36)
+                .background(.black.opacity(0.35), in: Circle())
+        }
+        .buttonStyle(.plain)
+        .contentShape(Circle())
+    }
+}
+
+/// Cantos em L marcando a área de foco — puramente visual, a foto captura
+/// a tela inteira independente da moldura.
+private struct ViewfinderFrame: View {
+    var body: some View {
+        GeometryReader { geo in
+            let length: CGFloat = 28
+            let corners: [(CGPoint, [CGFloat])] = [
+                (.init(x: 0, y: 0), [1, 1]),
+                (.init(x: geo.size.width, y: 0), [-1, 1]),
+                (.init(x: 0, y: geo.size.height), [1, -1]),
+                (.init(x: geo.size.width, y: geo.size.height), [-1, -1]),
+            ]
+            ForEach(0..<corners.count, id: \.self) { i in
+                let (point, direction) = corners[i]
+                Path { path in
+                    path.move(to: CGPoint(x: point.x, y: point.y + length * direction[1]))
+                    path.addLine(to: point)
+                    path.addLine(to: CGPoint(x: point.x + length * direction[0], y: point.y))
+                }
+                .stroke(.white, lineWidth: 3)
+            }
+        }
     }
 }

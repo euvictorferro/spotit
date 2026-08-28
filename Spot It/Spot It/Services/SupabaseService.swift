@@ -234,4 +234,12 @@ struct SupabaseService {
             .execute()
             .value
     }
+
+    static func deleteWalletItems(ids: [UUID]) async throws {
+        try await ensureSignedIn()
+        try await client.from("wallet_items")
+            .delete()
+            .in("id", values: ids.map(\.uuidString))
+            .execute()
+    }
 }

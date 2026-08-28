@@ -1,4 +1,5 @@
 import SwiftUI
+import Photos
 
 enum WalletSortOption: String, CaseIterable, Identifiable {
     case priceHighToLow = "Preço: Maior pro Menor"
@@ -14,9 +15,11 @@ enum WalletSortOption: String, CaseIterable, Identifiable {
 }
 
 struct WalletAllView: View {
-    let items: [WalletItem]
+    @Binding var items: [WalletItem]
 
     @State private var sort: WalletSortOption = .addedNewestFirst
+    @State private var showDeleteConfirm = false
+    @State private var isDeleting = false
     @State private var showFilter = false
     @State private var selectedCountry: String? // nil = todos
     @State private var selectedEdition: String? // nil = todas
@@ -30,11 +33,13 @@ struct WalletAllView: View {
     @State private var isSelecting = false
     @State private var selectedIDs: Set<UUID> = []
     @State private var detailItem: WalletItem?
+    @State private var isExporting = false
+    @State private var exportMessage: String?
 
-    init(items: [WalletItem]) {
-        self.items = items
-        let years = items.compactMap { $0.ano }.map(Double.init)
-        let prices = items.map(\.valorEstimadoUsd)
+    init(items: Binding<[WalletItem]>) {
+        self._items = items
+        let years = items.wrappedValue.compactMap { $0.ano }.map(Double.init)
+        let prices = items.wrappedValue.map(\.valorEstimadoUsd)
         _yearLow = State(initialValue: years.min() ?? 1990)
         _yearHigh = State(initialValue: years.max() ?? 2026)
         _priceLow = State(initialValue: prices.min() ?? 0)
@@ -112,16 +117,17 @@ struct WalletAllView: View {
 
             if isSelecting {
                 selectionHeader
+                selectionActionBar
+            }
+
+            if let exportMessage {
+                Text(exportMessage).font(.caption).foregroundStyle(.secondary)
             }
 
             VStack(spacing: Theme.Spacing.md) {
                 ForEach(filteredAndSorted) { item in
                     row(item)
                 }
-            }
-
-            if isSelecting {
-                selectionActionBar
             }
         }
         .sheet(isPresented: $showFilter) {
@@ -143,9 +149,31 @@ struct WalletAllView: View {
                 resultCount: filteredAndSorted.count
             )
         }
-        .sheet(item: $detailItem) { item in
+        .fullScreenCover(item: $detailItem) { item in
             CarDetailPageView(item: item)
         }
+        .confirmationDialog(
+            "Você tem certeza que quer deletar esses carros?",
+            isPresented: $showDeleteConfirm,
+            titleVisibility: .visible
+        ) {
+            Button("Deletar \(selectedIDs.count) carro\(selectedIDs.count == 1 ? "" : "s")", role: .destructive) {
+                Task { await deleteSelected() }
+            }
+            Button("Cancelar", role: .cancel) {}
+        } message: {
+            Text("Essas fotos não estarão salvas e você não conseguirá recuperar depois.")
+        }
+    }
+
+    private func deleteSelected() async {
+        isDeleting = true
+        let idsToDelete = selectedIDs
+        try? await SupabaseService.deleteWalletItems(ids: Array(idsToDelete))
+        items.removeAll { idsToDelete.contains($0.id) }
+        selectedIDs.removeAll()
+        isSelecting = false
+        isDeleting = false
     }
 
     private var toolbarRow: some View {
@@ -207,22 +235,57 @@ struct WalletAllView: View {
 
     private var selectionActionBar: some View {
         HStack {
-            selectionAction(icon: "trash", label: "Excluir")
+            selectionAction(icon: "trash", label: "Excluir") {
+                showDeleteConfirm = true
+            }
             Spacer()
-            selectionAction(icon: "folder", label: "Mover")
-            Spacer()
-            selectionAction(icon: "square.and.arrow.up", label: "Exportar")
+            selectionAction(icon: isExporting ? "hourglass" : "square.and.arrow.down", label: "Exportar") {
+                Task { await exportSelected() }
+            }
+            .disabled(selectedIDs.isEmpty || isExporting)
         }
         .padding(.top, Theme.Spacing.sm)
     }
 
-    private func selectionAction(icon: String, label: String) -> some View {
-        VStack(spacing: 4) {
-            Image(systemName: icon)
-            Text(label).font(.caption2)
+    /// Baixa a foto de cada carro selecionado e salva na galeria do usuário
+    /// (Fotos do iOS) — pede permissão de "adicionar fotos" na primeira vez.
+    private func exportSelected() async {
+        isExporting = true
+        exportMessage = nil
+        let urls = items.filter { selectedIDs.contains($0.id) && !$0.fotoUrl.isEmpty }.compactMap { URL(string: $0.fotoUrl) }
+        guard !urls.isEmpty else {
+            exportMessage = "Nenhuma foto disponível pra exportar."
+            isExporting = false
+            return
         }
-        .foregroundStyle(selectedIDs.isEmpty ? .tertiary : .primary)
-        .opacity(selectedIDs.isEmpty ? 0.5 : 1)
+        let status = await PHPhotoLibrary.requestAuthorization(for: .addOnly)
+        guard status == .authorized || status == .limited else {
+            exportMessage = "Sem permissão pra salvar na galeria. Verifique em Ajustes."
+            isExporting = false
+            return
+        }
+        var saved = 0
+        for url in urls {
+            guard let data = try? Data(contentsOf: url), let image = UIImage(data: data) else { continue }
+            let ok = (try? await PHPhotoLibrary.shared().performChanges {
+                PHAssetChangeRequest.creationRequestForAsset(from: image)
+            }) != nil
+            if ok { saved += 1 }
+        }
+        exportMessage = saved > 0 ? "\(saved) foto\(saved == 1 ? "" : "s") salva\(saved == 1 ? "" : "s") na galeria." : "Não foi possível exportar as fotos."
+        isExporting = false
+    }
+
+    private func selectionAction(icon: String, label: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            VStack(spacing: 4) {
+                Image(systemName: icon)
+                Text(label).font(.caption2)
+            }
+            .foregroundStyle(selectedIDs.isEmpty ? .tertiary : .primary)
+            .opacity(selectedIDs.isEmpty ? 0.5 : 1)
+        }
+        .disabled(selectedIDs.isEmpty)
     }
 
     private func row(_ item: WalletItem) -> some View {
@@ -278,5 +341,5 @@ struct WalletAllView: View {
 }
 
 #Preview {
-    ScrollView { WalletAllView(items: WalletItem.sample).padding() }
+    ScrollView { WalletAllView(items: .constant(WalletItem.sample)).padding() }
 }

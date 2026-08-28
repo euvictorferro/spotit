@@ -15,16 +15,19 @@ struct ContentView: View {
         ZStack(alignment: .bottomTrailing) {
             TabView {
                 FeedView()
-                    .tabItem { Label("Feed", systemImage: "house") }
-
-                WalletView()
-                    .tabItem { Label("Wallet", systemImage: "wallet.pass") }
+                    .tabItem { Image(systemName: "house") }
 
                 DMView()
-                    .tabItem { Label("DM", systemImage: "message") }
+                    .tabItem { Image(systemName: "message") }
+
+                SearchUsersView()
+                    .tabItem { Image(systemName: "magnifyingglass") }
+
+                WalletView()
+                    .tabItem { Image(systemName: "wallet.pass") }
 
                 ProfileView()
-                    .tabItem { Label("Perfil", systemImage: "person.circle") }
+                    .tabItem { Image(systemName: "person.circle") }
             }
             .environmentObject(captureButtonVisibility)
 
@@ -38,12 +41,14 @@ struct ContentView: View {
                         .frame(width: 56, height: 56)
                         .background(Circle().fill(Color.accentColor))
                         .shadow(radius: 4, y: 2)
+                        .contentShape(Circle())
                 }
+                .buttonStyle(.plain)
                 .padding(.trailing, 20)
                 .padding(.bottom, 70)
             }
         }
-        .sheet(isPresented: $showCapture) {
+        .fullScreenCover(isPresented: $showCapture) {
             CaptureView()
         }
     }

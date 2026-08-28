@@ -11,12 +11,8 @@ struct GeographicDistributionFullView: View {
         ZStack(alignment: .top) {
             Map {
                 ForEach(breakdown, id: \.info.country) { entry in
-                    Annotation(entry.info.country, coordinate: entry.info.coordinate) {
-                        ZStack {
-                            Circle().fill(.white).frame(width: 30, height: 30)
-                            Circle().stroke(Color.accentColor, lineWidth: 2).frame(width: 30, height: 30)
-                            Text("\(entry.count)").font(.caption).fontWeight(.bold).foregroundStyle(.black)
-                        }
+                    Annotation(entry.info.country, coordinate: entry.info.coordinate, anchor: .bottom) {
+                        MapPinAnnotation(country: entry.info.country, count: entry.count)
                     }
                 }
             }
@@ -51,7 +47,7 @@ struct GeographicDistributionFullView: View {
 
             ForEach(breakdown, id: \.info.country) { entry in
                 HStack {
-                    FlagBadge(flag: entry.info.flag)
+                    FlagBadge(country: entry.info.country)
                     Text(entry.info.country).font(.subheadline)
                     Spacer()
                     Text("\(entry.count) carro\(entry.count == 1 ? "" : "s")")
@@ -66,14 +62,15 @@ struct GeographicDistributionFullView: View {
 }
 
 /// Ícone de bolinha com a bandeira dentro, em vez do emoji solto.
+/// Bandeira em emblema redondo — o emoji de bandeira é retangular por
+/// natureza, então renderizamos maior que o círculo e cortamos com
+/// clipShape pra preencher de borda a borda, tipo moeda/selo.
 struct FlagBadge: View {
-    let flag: String
+    let country: String
+    var size: CGFloat = 26
 
     var body: some View {
-        Circle()
-            .fill(Color(.tertiarySystemFill))
-            .frame(width: 26, height: 26)
-            .overlay(Text(flag).font(.footnote))
+        VectorFlagView(country: country, size: size)
     }
 }
 

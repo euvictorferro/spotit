@@ -29,7 +29,7 @@ struct EventDetailView: View {
                     infoRow(icon: "mappin.and.ellipse", text: event.location)
                     infoRow(icon: "person.2.fill", text: "\(event.attendees) confirmados · organizado por \(event.organizer)")
                 }
-                .card()
+                .glassCard()
 
                 Text(event.description)
                     .font(.subheadline)
@@ -66,7 +66,10 @@ struct EventDetailView: View {
             }
             .padding(Theme.Spacing.md)
         }
+        .background(AppGradientBackground())
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(.hidden, for: .navigationBar)
+        .preferredColorScheme(.dark)
     }
 
     private func infoRow(icon systemImage: String, text: String) -> some View {

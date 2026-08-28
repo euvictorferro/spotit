@@ -3,6 +3,10 @@ import SwiftUI
 struct ResultView: View {
     let carInfo: CarInfo
     let image: UIImage?
+    /// Fecha o fluxo de captura inteiro (não só esse sheet) — usado no
+    /// "Fechar" e depois de salvar; o retake (ícone de câmera) usa o
+    /// dismiss() normal, que só fecha esse resultado e volta pra câmera.
+    var onFinish: () -> Void = {}
     @Environment(\.dismiss) private var dismiss
     @State private var isSaving = false
     @State private var saveError: String?
@@ -68,7 +72,7 @@ struct ResultView: View {
             }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Fechar") { dismiss() }
+                    Button("Fechar") { onFinish() }
                 }
             }
         }
@@ -275,7 +279,7 @@ struct ResultView: View {
         do {
             let url = try await SupabaseService.uploadPhoto(imageData: data)
             try await SupabaseService.saveWalletItem(car: carInfo, fotoUrl: url, lat: nil, lng: nil)
-            dismiss()
+            onFinish()
         } catch {
             saveError = "Não foi possível salvar. Tenta de novo."
         }

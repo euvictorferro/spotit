@@ -77,7 +77,7 @@ struct WalletSummaryView: View {
 
     private func sectionHeader(_ title: String) -> some View {
         HStack {
-            Text(title).font(.headline)
+            Text(title).font(.walletHeadline)
             Spacer()
             Button {
                 showFeedback = true
@@ -115,26 +115,35 @@ private struct BestCarsCarousel: View {
                         .frame(height: 130)
                         .overlay(Image(systemName: "car.side.fill").font(.system(size: 40)).foregroundStyle(Theme.rarityColor(page.item.raridade)))
 
-                    VStack(spacing: 2) {
-                        Text(valueLine(for: page))
-                            .font(.system(.title3, design: .rounded, weight: .heavy))
-                        Text(page.badge)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                    Rectangle()
+                        .fill(Color.white.opacity(0.15))
+                        .frame(height: 1)
+
+                    HStack(spacing: Theme.Spacing.md) {
+                        Image(systemName: "laurel.leading").font(.title2).foregroundStyle(.secondary)
+                        VStack(spacing: 2) {
+                            Text(valueLine(for: page))
+                                .font(.system(.title3, design: .rounded, weight: .heavy))
+                            Text(page.badge)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        Image(systemName: "laurel.trailing").font(.title2).foregroundStyle(.secondary)
                     }
+
                     // Reserva espaço pra bolinha de paginação não cobrir o texto.
                     Spacer(minLength: 22)
                 }
                 .padding(Theme.Spacing.md)
-                .card()
+                .glassCard()
                 .contentShape(Rectangle())
                 .onTapGesture { detailItem = page.item }
             }
         }
         .tabViewStyle(.page)
         .indexViewStyle(.page(backgroundDisplayMode: .always))
-        .frame(height: 300)
-        .sheet(item: $detailItem) { item in
+        .frame(height: 320)
+        .fullScreenCover(item: $detailItem) { item in
             CarDetailPageView(item: item)
         }
     }
@@ -173,25 +182,30 @@ private struct GeographicDistributionView: View {
                 .font(.footnote)
                 .foregroundStyle(.secondary)
 
+            // Só o mapa dentro da box — países e "Ver Todos" ficam fora.
+            // allowsHitTesting(false) + Color.clear por cima em vez de
+            // onTapGesture direto no Map: encadear onTapGesture depois de
+            // allowsHitTesting(false) é inconsistente, o toque não pegava.
             Map(initialPosition: position) {
                 ForEach(breakdown, id: \.info.country) { entry in
-                    Annotation(entry.info.country, coordinate: entry.info.coordinate) {
-                        ZStack {
-                            Circle().fill(.white).frame(width: 30, height: 30)
-                            Circle().stroke(Color.accentColor, lineWidth: 2).frame(width: 30, height: 30)
-                            Text("\(entry.count)").font(.caption).fontWeight(.bold).foregroundStyle(.black)
-                        }
+                    Annotation(entry.info.country, coordinate: entry.info.coordinate, anchor: .bottom) {
+                        MapPinAnnotation(country: entry.info.country, count: entry.count)
                     }
                 }
             }
             .frame(height: 160)
             .clipShape(RoundedRectangle(cornerRadius: Theme.cornerRadius))
             .allowsHitTesting(false)
-            .onTapGesture { onTapMap() }
+            .overlay {
+                Color.clear
+                    .contentShape(Rectangle())
+                    .onTapGesture { onTapMap() }
+            }
+            .glassCard()
 
             ForEach(top3, id: \.info.country) { entry in
                 HStack {
-                    FlagBadge(flag: entry.info.flag)
+                    FlagBadge(country: entry.info.country)
                     Text(entry.info.country).font(.subheadline)
                     Spacer()
                     Text("\(entry.count) carro\(entry.count == 1 ? "" : "s")")
@@ -200,13 +214,18 @@ private struct GeographicDistributionView: View {
                 }
             }
 
-            if breakdown.count > 3 {
-                Button("Ver Todos") { onTapMap() }
-                    .buttonStyle(.bordered)
-                    .frame(maxWidth: .infinity)
-            }
+            Button("Ver Todos", action: onTapMap)
+                .font(.subheadline).fontWeight(.semibold)
+                .foregroundStyle(.primary)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, Theme.Spacing.sm)
+                .contentShape(Rectangle())
+                .overlay(
+                    RoundedRectangle(cornerRadius: Theme.cornerRadius)
+                        .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                )
+                .buttonStyle(.plain)
         }
-        .card()
     }
 }
 
@@ -224,6 +243,10 @@ struct SetCard: View {
         min(Double(count) / Double(info.knownModels), 1)
     }
 
+    private var mostExpensive: WalletItem? {
+        items.max { $0.valorEstimadoUsd < $1.valorEstimadoUsd }
+    }
+
     var body: some View {
         NavigationLink(destination: SetDetailView(brand: brand, info: info, items: items)) {
             cardContent
@@ -233,18 +256,30 @@ struct SetCard: View {
 
     private var cardContent: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-            BrandLogoBadge(brand: brand)
-                .frame(height: 100)
+            if let mostExpensive {
+                RoundedRectangle(cornerRadius: Theme.cornerRadius)
+                    .fill(
+                        LinearGradient(
+                            colors: [Theme.rarityColor(mostExpensive.raridade).opacity(0.6), Theme.rarityColor(mostExpensive.raridade).opacity(0.15)],
+                            startPoint: .top, endPoint: .bottom
+                        )
+                    )
+                    .frame(height: 100)
+                    .overlay(Image(systemName: "car.side.fill").font(.system(size: 32)).foregroundStyle(Theme.rarityColor(mostExpensive.raridade)))
+            } else {
+                BrandLogoBadge(brand: brand)
+                    .frame(height: 100)
+            }
 
             HStack(alignment: .firstTextBaseline, spacing: 4) {
-                Text("\(count)").font(.title3).fontWeight(.heavy).foregroundStyle(Color.accentColor)
+                Text("\(count)").font(.system(.title2, design: .rounded, weight: .heavy)).foregroundStyle(Color.accentColor)
                 Text("/ \(info.knownModels) carros").font(.subheadline).foregroundStyle(.secondary)
             }
 
             ProgressView(value: progress)
                 .tint(Color.accentColor)
 
-            Text(brand).font(.headline)
+            Text(brand).font(.walletHeadline)
             Text("Você coletou \(Int(progress * 100))% dessa marca")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
@@ -252,8 +287,8 @@ struct SetCard: View {
                 .font(.system(.subheadline, design: .rounded, weight: .bold))
                 .foregroundStyle(.secondary)
         }
-        .padding(Theme.Spacing.md)
-        .card()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .glassCard()
     }
 }
 

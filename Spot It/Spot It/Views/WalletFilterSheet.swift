@@ -29,10 +29,6 @@ struct WalletFilterSheet: View {
 
     @Environment(\.dismiss) private var dismiss
 
-    private func flag(for country: String) -> String {
-        CarBrandInfo.table.values.first { $0.country == country }?.flag ?? "🏳️"
-    }
-
     private var priceHistogram: [Int] {
         histogram(for: items.map(\.valorEstimadoUsd), bounds: priceBounds, buckets: 12)
     }
@@ -60,7 +56,7 @@ struct WalletFilterSheet: View {
                         FlowChips {
                             chip("Todos", icon: "globe", isSelected: selectedCountry == nil) { selectedCountry = nil }
                             ForEach(countries, id: \.self) { country in
-                                chip(country, emoji: flag(for: country), isSelected: selectedCountry == country) { selectedCountry = country }
+                                chip(country, flagCountry: country, isSelected: selectedCountry == country) { selectedCountry = country }
                             }
                         }
                     }
@@ -160,11 +156,11 @@ struct WalletFilterSheet: View {
         }
     }
 
-    private func chip(_ label: String, icon: String? = nil, emoji: String? = nil, isSelected: Bool, action: @escaping () -> Void) -> some View {
+    private func chip(_ label: String, icon: String? = nil, flagCountry: String? = nil, isSelected: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: 5) {
                 if let icon { Image(systemName: icon) }
-                if let emoji { FlagBadge(flag: emoji).frame(width: 16, height: 16) }
+                if let flagCountry { FlagBadge(country: flagCountry, size: 16) }
                 Text(label).lineLimit(1)
             }
             .font(.subheadline)

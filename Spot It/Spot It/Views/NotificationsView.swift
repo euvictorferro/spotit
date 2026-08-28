@@ -14,6 +14,12 @@ struct NotificationsView: View {
         notifications.filter { $0.section == section }
     }
 
+    /// Pessoas que já te seguem mas você ainda não segue de volta — sem
+    /// grafo social real ainda, então é uma amostra de SearchableUser.
+    /// Vira uma query de verdade ("followers not followed back") quando
+    /// tiver backend social.
+    private let suggestions = Array(SearchableUser.sample.prefix(3))
+
     var body: some View {
         List {
             ForEach(sections, id: \.self) { section in
@@ -25,18 +31,36 @@ struct NotificationsView: View {
                     }
                 }
             }
+
+            Section("Sugestões para seguir de volta") {
+                ForEach(suggestions) { user in
+                    suggestionRow(user)
+                        .contentShape(Rectangle())
+                        .onTapGesture { pushUsername = user.username }
+                }
+            }
         }
         .navigationTitle("Notificações")
         .navigationDestination(item: $pushUsername) { username in
             UserProfileView(
                 username: username,
-                avatarInitials: notifications.first { $0.username == username }?.avatarInitials ?? "",
-                avatarColors: notifications.first { $0.username == username }?.avatarColors ?? [.gray]
+                avatarInitials: avatarInitials(for: username),
+                avatarColors: avatarColors(for: username)
             )
         }
-        .sheet(item: $detailItem) { item in
+        .fullScreenCover(item: $detailItem) { item in
             CarDetailPageView(item: item)
         }
+    }
+
+    private func avatarInitials(for username: String) -> String {
+        notifications.first { $0.username == username }?.avatarInitials
+            ?? suggestions.first { $0.username == username }?.avatarInitials ?? ""
+    }
+
+    private func avatarColors(for username: String) -> [Color] {
+        notifications.first { $0.username == username }?.avatarColors
+            ?? suggestions.first { $0.username == username }?.avatarColors ?? [.gray]
     }
 
     private func row(_ notification: AppNotification) -> some View {
@@ -73,6 +97,25 @@ struct NotificationsView: View {
         .padding(.vertical, 2)
     }
 
+    private func suggestionRow(_ user: SearchableUser) -> some View {
+        HStack(spacing: Theme.Spacing.sm) {
+            Circle()
+                .fill(LinearGradient(colors: user.avatarColors, startPoint: .topLeading, endPoint: .bottomTrailing))
+                .frame(width: 38, height: 38)
+                .overlay(Text(user.avatarInitials).font(.caption2).fontWeight(.bold).foregroundStyle(.white))
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(user.username).font(.subheadline).fontWeight(.semibold)
+                Text("Segue você").font(.caption2).foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            SuggestionFollowButton()
+        }
+        .padding(.vertical, 2)
+    }
+
     private func open(_ notification: AppNotification) {
         if let index = notifications.firstIndex(where: { $0.id == notification.id }) {
             notifications[index].isRead = true
@@ -101,6 +144,27 @@ struct NotificationsView: View {
         case .comment: return .blue
         case .follow: return Color.accentColor
         }
+    }
+}
+
+/// Botão "Seguir" → "Seguindo" com estado local, mesmo padrão do FollowButton
+/// do feed — some é o card de sugestão que fica, então não precisa sumir.
+private struct SuggestionFollowButton: View {
+    @State private var isFollowing = false
+
+    var body: some View {
+        Button {
+            isFollowing.toggle()
+        } label: {
+            Text(isFollowing ? "Seguindo" : "Seguir")
+                .font(.caption)
+                .fontWeight(.semibold)
+                .padding(.horizontal, Theme.Spacing.sm)
+                .padding(.vertical, 6)
+                .background(isFollowing ? Color(.secondarySystemBackground) : Color.accentColor, in: Capsule())
+                .foregroundStyle(isFollowing ? Color.primary : Color.white)
+        }
+        .buttonStyle(.plain)
     }
 }
 

@@ -15,7 +15,11 @@ struct EventsView: View {
             }
             .padding(Theme.Spacing.md)
         }
+        .background(AppGradientBackground())
         .navigationTitle("Eventos")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(.hidden, for: .navigationBar)
+        .preferredColorScheme(.dark)
     }
 
     private func card(_ event: CarEvent) -> some View {
@@ -30,7 +34,7 @@ struct EventsView: View {
                 .clipShape(RoundedRectangle(cornerRadius: Theme.cornerRadius))
 
             VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-                Text(event.name).font(.headline)
+                Text(event.name).font(.walletHeadline)
                 Text(event.dateLabel).font(.footnote).foregroundStyle(.secondary)
                 Text(event.location).font(.footnote).foregroundStyle(.secondary)
 
@@ -51,7 +55,7 @@ struct EventsView: View {
             .padding(Theme.Spacing.md)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .card()
+        .glassCard()
     }
 
     private func binding(for id: UUID) -> Binding<Bool> {

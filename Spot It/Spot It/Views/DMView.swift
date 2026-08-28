@@ -11,9 +11,13 @@ struct DMView: View {
     @State private var conversations = DMConversation.sample
     @State private var search = ""
     @State private var filter: DMFilter = .all
+    @FocusState private var isSearchFocused: Bool
+    // Reseta a navegação sempre que a aba fica inativa — sem isso, sair
+    // pro perfil de alguém e trocar de aba deixava o DM "preso" lá.
+    @State private var path = NavigationPath()
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             VStack(spacing: Theme.Spacing.md) {
                 searchField
                 filterChips
@@ -41,12 +45,17 @@ struct DMView: View {
                 }
             }
         }
+        .onDisappear {
+            path = NavigationPath()
+            isSearchFocused = false
+        }
     }
 
     private var searchField: some View {
         HStack {
             Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
             TextField("Buscar", text: $search)
+                .focused($isSearchFocused)
         }
         .padding(Theme.Spacing.sm)
         .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 10))
@@ -159,8 +168,19 @@ struct ChatThreadView: View {
             }
             .padding(Theme.Spacing.md)
         }
-        .navigationTitle(conversation.username)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                NavigationLink {
+                    UserProfileView(username: conversation.username, avatarInitials: conversation.avatarInitials, avatarColors: conversation.avatarColors)
+                } label: {
+                    Text(conversation.username)
+                        .font(.headline)
+                        .foregroundStyle(.primary)
+                }
+            }
+        }
         .onAppear { captureButtonVisibility.isHidden = true }
         .onDisappear {
             captureButtonVisibility.isHidden = false

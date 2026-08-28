@@ -10,6 +10,9 @@ struct WalletView: View {
     @State private var items: [WalletItem] = []
     @State private var isLoading = true
     @State private var tab: WalletTab = .summary
+    // Reseta a navegação sempre que a aba fica inativa — sem isso, sair pro
+    // detalhe de um Set/carro e trocar de aba deixava a Wallet "presa" lá.
+    @State private var path = NavigationPath()
 
     var total: Double {
         items.reduce(0) { $0 + $1.valorEstimadoUsd }
@@ -20,7 +23,7 @@ struct WalletView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             ScrollView {
                 VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
                     header
@@ -30,13 +33,14 @@ struct WalletView: View {
                     case .summary:
                         WalletSummaryView(items: items)
                     case .all:
-                        WalletAllView(items: items)
+                        WalletAllView(items: $items)
                     case .sets:
                         WalletSetsView(items: items)
                     }
                 }
                 .padding(Theme.Spacing.md)
             }
+            .background(AppGradientBackground())
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Text("Spot It").font(.headline)
@@ -47,6 +51,7 @@ struct WalletView: View {
                     }
                 }
             }
+            .toolbarBackground(.hidden, for: .navigationBar)
             .task { await load() }
             .refreshable { await load() }
             .overlay {
@@ -55,6 +60,8 @@ struct WalletView: View {
                 }
             }
         }
+        .preferredColorScheme(.dark)
+        .onDisappear { path = NavigationPath() }
     }
 
     private var header: some View {
@@ -65,17 +72,21 @@ struct WalletView: View {
                 .font(.footnote)
                 .foregroundStyle(.secondary)
 
-            HStack(spacing: Theme.Spacing.lg) {
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("\(items.count)").font(.headline)
-                    Text("Carro\(items.count == 1 ? "" : "s")").font(.caption).foregroundStyle(.secondary)
-                }
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("\(brandCount)").font(.headline)
-                    Text("Marca\(brandCount == 1 ? "" : "s")").font(.caption).foregroundStyle(.secondary)
-                }
+            HStack(spacing: Theme.Spacing.md) {
+                statBlock(value: "\(items.count)", label: "Carro\(items.count == 1 ? "" : "s")")
+                Rectangle()
+                    .fill(Color.white.opacity(0.25))
+                    .frame(width: 1, height: 32)
+                statBlock(value: "\(brandCount)", label: "Marca\(brandCount == 1 ? "" : "s")")
             }
             .padding(.top, Theme.Spacing.xs)
+        }
+    }
+
+    private func statBlock(value: String, label: String) -> some View {
+        VStack(alignment: .leading, spacing: 1) {
+            Text(value).font(.system(.title3, design: .rounded, weight: .bold))
+            Text(label).font(.subheadline).foregroundStyle(.secondary)
         }
     }
 
@@ -87,16 +98,16 @@ struct WalletView: View {
                 } label: {
                     Text(option.rawValue)
                         .font(.subheadline)
-                        .fontWeight(tab == option ? .semibold : .regular)
+                        .fontWeight(.semibold)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, Theme.Spacing.sm)
-                        .background(tab == option ? Color(.systemBackground) : .clear, in: Capsule())
-                        .foregroundStyle(tab == option ? .primary : .secondary)
+                        .background(tab == option ? Color.white : .clear, in: Capsule())
+                        .foregroundStyle(tab == option ? .black : .white.opacity(0.8))
                 }
             }
         }
         .padding(4)
-        .background(Color(.secondarySystemBackground), in: Capsule())
+        .background(.ultraThinMaterial, in: Capsule())
     }
 
     private func load() async {

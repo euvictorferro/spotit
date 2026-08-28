@@ -44,7 +44,7 @@ struct MapView: View {
                 .background(.thinMaterial, in: Capsule())
                 .padding(.bottom, Theme.Spacing.lg)
         }
-        .sheet(item: $detailItem) { item in
+        .fullScreenCover(item: $detailItem) { item in
             CarDetailPageView(item: item)
         }
     }

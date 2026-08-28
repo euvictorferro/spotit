@@ -1,7 +1,9 @@
 import SwiftUI
 
 /// Gauge de raridade em formato de arco (semicírculo) com um ícone marcando
-/// a posição — usado na página de detalhe do carro.
+/// a posição — usado na página de detalhe do carro. Arco elíptico (raio
+/// horizontal maior que o vertical) pra ficar largo e baixo, ocupando
+/// quase a largura toda da tela.
 struct ArcGaugeView: View {
     let raridade: Int
 
@@ -14,7 +16,8 @@ struct ArcGaugeView: View {
                 .foregroundStyle(Theme.rarityColor(raridade))
 
             GeometryReader { geo in
-                let radius = min(geo.size.width / 2, geo.size.height)
+                let rx = geo.size.width / 2
+                let ry = geo.size.height
                 let center = CGPoint(x: geo.size.width / 2, y: geo.size.height)
                 let markerAngle = Angle.degrees(180 + 180 * progress)
 
@@ -34,39 +37,41 @@ struct ArcGaugeView: View {
                         .frame(width: 28, height: 28)
                         .background(Theme.rarityColor(raridade), in: Circle())
                         .position(
-                            x: center.x + radius * CGFloat(cos(markerAngle.radians)),
-                            y: center.y + radius * CGFloat(sin(markerAngle.radians))
+                            x: center.x + rx * CGFloat(cos(markerAngle.radians)),
+                            y: center.y + ry * CGFloat(sin(markerAngle.radians))
                         )
                 }
             }
-            .frame(height: 90)
-            .padding(.horizontal, Theme.Spacing.lg)
+            .frame(height: 46)
+            .padding(.horizontal, Theme.Spacing.xs)
 
             HStack {
                 Text("Comum").font(.caption2).foregroundStyle(.secondary)
                 Spacer()
                 Text("Lendário").font(.caption2).foregroundStyle(.secondary)
             }
-            .padding(.horizontal, Theme.Spacing.md)
+            .padding(.horizontal, Theme.Spacing.sm)
         }
     }
 }
 
-/// Arco que vai de 180° (esquerda) até 180°+180°*progress — semicírculo
-/// aberto pra cima, com o centro na base do frame.
+/// Arco elíptico que vai de 180° (esquerda) até 180°+180°*progress —
+/// semicírculo aberto pra cima, com o centro na base do frame. Raio
+/// horizontal (rx) e vertical (ry) independentes pra caber num frame
+/// bem mais largo que alto.
 private struct GaugeArc: Shape {
     let progress: Double
 
     func path(in rect: CGRect) -> Path {
-        var path = Path()
-        let radius = min(rect.width / 2, rect.height)
+        let rx = rect.width / 2
+        let ry = rect.height
         let center = CGPoint(x: rect.midX, y: rect.maxY)
-        path.addArc(
-            center: center, radius: radius,
-            startAngle: .degrees(180), endAngle: .degrees(180 + 180 * progress),
-            clockwise: false
-        )
-        return path
+
+        var unitPath = Path()
+        unitPath.addArc(center: .zero, radius: 1, startAngle: .degrees(180), endAngle: .degrees(180 + 180 * progress), clockwise: false)
+
+        let transform = CGAffineTransform(translationX: center.x, y: center.y).scaledBy(x: rx, y: ry)
+        return unitPath.applying(transform)
     }
 }
 
