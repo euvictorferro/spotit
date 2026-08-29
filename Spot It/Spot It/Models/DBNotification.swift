@@ -1,5 +1,9 @@
 import Foundation
 
+enum NotificationKind: String {
+    case like, comment, follow
+}
+
 struct DBNotification: Identifiable {
     let id: UUID
     let actorId: UUID

@@ -4,6 +4,8 @@ struct NotificationsView: View {
     @State private var notifications: [DBNotification] = []
     @State private var pushUserId: UUID?
     @State private var detailItem: WalletItem?
+    @State private var loadFailed = false
+    @State private var actionErrorMessage: String?
 
     private func section(for date: Date) -> String {
         let calendar = Calendar.current
@@ -29,7 +31,10 @@ struct NotificationsView: View {
     var body: some View {
         Group {
             if notifications.isEmpty && suggestions.isEmpty {
-                EmptyStateView(icon: "bell", message: "Nenhuma notificação ainda.")
+                EmptyStateView(
+                    icon: loadFailed ? "exclamationmark.triangle" : "bell",
+                    message: loadFailed ? "Não deu pra carregar as notificações agora. Puxe pra atualizar." : "Nenhuma notificação ainda."
+                )
             } else {
                 List {
                     ForEach(sections, id: \.self) { section in
@@ -69,10 +74,24 @@ struct NotificationsView: View {
         .fullScreenCover(item: $detailItem) { item in
             CarDetailPageView(item: item)
         }
+        .alert("Ops", isPresented: Binding(
+            get: { actionErrorMessage != nil },
+            set: { if !$0 { actionErrorMessage = nil } }
+        )) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(actionErrorMessage ?? "")
+        }
     }
 
     private func load() async {
-        notifications = (try? await SupabaseService.fetchNotifications()) ?? []
+        loadFailed = false
+        do {
+            notifications = try await SupabaseService.fetchNotifications()
+        } catch {
+            notifications = []
+            loadFailed = true
+        }
     }
 
     private func actor(for userId: UUID) -> SearchableUser {
@@ -162,10 +181,18 @@ struct NotificationsView: View {
         case .follow:
             pushUserId = notification.actorId
         case .like, .comment:
-            guard let postId = notification.postId else { return }
+            guard let postId = notification.postId,
+                  let myId = SupabaseService.currentUserId else {
+                actionErrorMessage = "Não foi possível abrir este post."
+                return
+            }
             Task {
-                if let post = (try? await SupabaseService.fetchFeedPosts())?.first(where: { $0.id == postId }) {
+                // A notificação é sempre sobre um post nosso — busca via fetchPosts(userId:),
+                // não fetchFeedPosts() (feed global, limitado a 50, pode nem conter o post).
+                if let post = (try? await SupabaseService.fetchPosts(userId: myId))?.first(where: { $0.id == postId }) {
                     detailItem = WalletItem(dbPost: post)
+                } else {
+                    actionErrorMessage = "Não foi possível abrir este post."
                 }
             }
         }

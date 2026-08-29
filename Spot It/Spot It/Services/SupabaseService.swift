@@ -650,7 +650,7 @@ struct SupabaseService {
 
         var notifications: [DBNotification] = []
         for row in rows {
-            let kind = NotificationKind(rawValue: row.kind) ?? .follow
+            guard let kind = NotificationKind(rawValue: row.kind) else { continue }
 
             struct ProfileRow: Decodable { let username: String; let avatar_url: String? }
             let profile: ProfileRow? = try? await client.from("profiles")
@@ -667,6 +667,10 @@ struct SupabaseService {
             ))
         }
         return notifications
+    }
+
+    static var currentUserId: UUID? {
+        client.auth.currentSession?.user.id
     }
 
     static func markNotificationRead(id: UUID) async throws {
