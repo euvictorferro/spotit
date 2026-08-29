@@ -19,11 +19,10 @@ struct ProfileView: View {
     @State private var showSettings = false
     @State private var showEditProfile = false
 
-    // ponytail: perfil editável só em memória (sem persistência/backend ainda) —
-    // vira campo real na tabela de usuário quando tivermos auth.
-    @State private var displayName = "Victor Ferro"
-    @State private var username = "victorferro"
-    @State private var bio = "Car spotter 🏎️ · Naples, FL"
+    @EnvironmentObject private var authService: AuthService
+    @State private var displayName = ""
+    @State private var username = ""
+    @State private var bio = ""
     @State private var avatarImageData: Data?
 
     private var avatarInitials: String {
@@ -79,6 +78,12 @@ struct ProfileView: View {
             .toolbarBackground(.hidden, for: .navigationBar)
             .task { await load() }
             .refreshable { await load() }
+            .onChange(of: authService.profile) { _, newProfile in
+                applyProfile(newProfile)
+            }
+            .onAppear {
+                applyProfile(authService.profile)
+            }
             .overlay {
                 if isLoading && items.isEmpty {
                     ProgressView()
@@ -87,7 +92,9 @@ struct ProfileView: View {
             .sheet(isPresented: $showSettings) {
                 SettingsSheet()
             }
-            .sheet(isPresented: $showEditProfile) {
+            .sheet(isPresented: $showEditProfile, onDismiss: {
+                Task { await persistProfileEdits() }
+            }) {
                 EditProfileSheet(displayName: $displayName, username: $username, bio: $bio, avatarImageData: $avatarImageData)
             }
         }
@@ -247,6 +254,21 @@ struct ProfileView: View {
         items = fetched.isEmpty ? WalletItem.sample : fetched
         isLoading = false
     }
+
+    private func applyProfile(_ profile: Profile?) {
+        guard let profile else { return }
+        displayName = profile.displayName ?? profile.username
+        username = profile.username
+        bio = profile.bio ?? ""
+    }
+
+    private func persistProfileEdits() async {
+        try? await authService.updateProfile(
+            displayName: displayName.isEmpty ? nil : displayName,
+            bio: bio.isEmpty ? nil : bio,
+            avatarData: avatarImageData
+        )
+    }
 }
 
 /// Configurações da conta — notificações, cidade e sair, mais os textos
@@ -254,6 +276,7 @@ struct ProfileView: View {
 /// usada no mapa). Toggle/cidade sem persistência ainda: guardam localmente
 /// até existir conta de verdade pra salvar isso no backend.
 private struct SettingsSheet: View {
+    @EnvironmentObject private var authService: AuthService
     @Environment(\.dismiss) private var dismiss
     @State private var notifyLikes = true
     @State private var notifyComments = true
@@ -301,8 +324,10 @@ private struct SettingsSheet: View {
                 }
             }
             .confirmationDialog("Sair da conta?", isPresented: $showLogoutConfirm, titleVisibility: .visible) {
-                // ponytail: sem auth real ainda — só fecha a tela, não desloga de verdade.
-                Button("Sair", role: .destructive) { dismiss() }
+                Button("Sair", role: .destructive) {
+                    Task { try? await authService.signOut() }
+                    dismiss()
+                }
                 Button("Cancelar", role: .cancel) {}
             }
         }
