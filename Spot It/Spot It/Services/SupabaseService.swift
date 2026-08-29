@@ -626,4 +626,55 @@ struct SupabaseService {
             .insert(NewComment(post_id: postId, user_id: myId, text: text))
             .execute()
     }
+
+    static func fetchNotifications() async throws -> [DBNotification] {
+        try ensureSignedIn()
+        guard let myId = client.auth.currentSession?.user.id else { throw SupabaseError.notSignedIn }
+
+        struct NotificationRow: Decodable {
+            let id: UUID
+            let actor_id: UUID
+            let kind: String
+            let post_id: UUID?
+            let is_read: Bool
+            let created_at: Date
+        }
+
+        let rows: [NotificationRow] = try await client.from("notifications")
+            .select()
+            .eq("user_id", value: myId)
+            .order("created_at", ascending: false)
+            .limit(50)
+            .execute()
+            .value
+
+        var notifications: [DBNotification] = []
+        for row in rows {
+            let kind = NotificationKind(rawValue: row.kind) ?? .follow
+
+            struct ProfileRow: Decodable { let username: String; let avatar_url: String? }
+            let profile: ProfileRow? = try? await client.from("profiles")
+                .select("username, avatar_url")
+                .eq("id", value: row.actor_id)
+                .single()
+                .execute()
+                .value
+
+            notifications.append(DBNotification(
+                id: row.id, actorId: row.actor_id,
+                actorUsername: profile?.username ?? "usuário", actorAvatarUrl: profile?.avatar_url,
+                kind: kind, postId: row.post_id, isRead: row.is_read, createdAt: row.created_at
+            ))
+        }
+        return notifications
+    }
+
+    static func markNotificationRead(id: UUID) async throws {
+        try ensureSignedIn()
+        struct MarkRead: Encodable { let is_read: Bool }
+        try await client.from("notifications")
+            .update(MarkRead(is_read: true))
+            .eq("id", value: id)
+            .execute()
+    }
 }

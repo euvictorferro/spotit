@@ -1,6 +1,6 @@
 import SwiftUI
 
-enum NotificationKind {
+enum NotificationKind: String {
     case like, comment, follow
 }
 
