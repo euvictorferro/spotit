@@ -10,6 +10,6 @@ struct DBEvent: Identifiable {
     let lng: Double?
     let eventDate: Date
     let description: String?
-    let attendeeCount: Int
+    var attendeeCount: Int
     var isGoing: Bool
 }
