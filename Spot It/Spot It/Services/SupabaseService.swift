@@ -152,23 +152,23 @@ struct SupabaseService {
         supabaseKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ldmR2bWp0a2tjZXJrYWt6a2NoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc4NDMwOTMsImV4cCI6MjEwMzQxOTA5M30.Cm36acvnAKTfjYjFMXX8ifyY849-goGnYrO9vQyEZP0"
     )
 
-    /// Garante que existe um usuário logado (anônimo) antes de ler/escrever na wallet.
-    /// A tabela wallet_items exige user_id + RLS; sem isso, insert/select falham.
-    static func ensureSignedIn() async throws {
-        if client.auth.currentSession == nil {
-            try await client.auth.signInAnonymously()
+    /// Garante que existe uma sessão real antes de ler/escrever na wallet.
+    /// Auth agora é obrigatório (email/senha ou Apple) — sem fallback anônimo.
+    static func ensureSignedIn() throws {
+        guard client.auth.currentSession != nil else {
+            throw SupabaseError.notSignedIn
         }
     }
 
     static func uploadPhoto(imageData: Data) async throws -> String {
-        try await ensureSignedIn()
+        try ensureSignedIn()
         let fileName = "\(UUID().uuidString).jpg"
         try await client.storage.from("car-photos").upload(fileName, data: imageData)
         return try client.storage.from("car-photos").getPublicURL(path: fileName).absoluteString
     }
 
     static func saveWalletItem(car: CarInfo, fotoUrl: String, lat: Double?, lng: Double?) async throws {
-        try await ensureSignedIn()
+        try ensureSignedIn()
         guard let userId = client.auth.currentSession?.user.id else {
             throw SupabaseError.notSignedIn
         }
@@ -240,7 +240,7 @@ struct SupabaseService {
     }
 
     static func fetchWalletItems() async throws -> [WalletItem] {
-        try await ensureSignedIn()
+        try ensureSignedIn()
         return try await client.from("wallet_items")
             .select()
             .order("created_at", ascending: false)
@@ -249,7 +249,7 @@ struct SupabaseService {
     }
 
     static func deleteWalletItems(ids: [UUID]) async throws {
-        try await ensureSignedIn()
+        try ensureSignedIn()
         try await client.from("wallet_items")
             .delete()
             .in("id", values: ids.map(\.uuidString))
