@@ -85,6 +85,37 @@ extension WalletItem {
         self.init(modelo: post.modelo, ano: post.ano, raridade: post.raridade, valorEstimadoUsd: post.valorEstimadoUsd, motor: post.motor, fatoInteressante: post.fatoInteressante)
     }
 
+    /// Converte um post real (DBPost) pra abrir a mesma CarDetailPageView da
+    /// Wallet. DBPost não tem ano/motor/fato interessante — ficam nil, a
+    /// página já trata seções opcionais como ausentes.
+    init(dbPost post: DBPost) {
+        id = post.id
+        modelo = post.modelo
+        ano = nil
+        raridade = post.raridade
+        valorEstimadoUsd = post.valorEstimadoUsd
+        fotoUrl = post.fotoUrl
+        createdAt = post.createdAt
+        motor = nil
+        potenciaCv = nil
+        aceleracao0a100 = nil
+        velocidadeMaximaKmh = nil
+        pesoKg = nil
+        producaoTotal = nil
+        analiseRaridade = nil
+        analiseMercado = nil
+        serie = nil
+        edicaoEspecial = nil
+        varianteMaisRara = nil
+        entreEixosMm = nil
+        comprimentoMm = nil
+        composicao = nil
+        designer = nil
+        materialBancos = nil
+        materialVolante = nil
+        interiorDestaque = nil
+    }
+
     /// Init "raso" usado por qualquer tela que só tem os dados básicos do
     /// carro (feed, mapa) e quer abrir a mesma CarDetailPageView da Wallet.
     init(modelo: String, ano: Int, raridade: Int, valorEstimadoUsd: Double, motor: String, fatoInteressante: String) {

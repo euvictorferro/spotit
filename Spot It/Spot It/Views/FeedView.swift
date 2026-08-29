@@ -5,8 +5,7 @@ struct FeedView: View {
     // pro perfil de alguém e trocar de aba deixava o Feed "preso" lá.
     @State private var path = NavigationPath()
 
-    // Sem backend social ainda — feed vazio até ter posts reais.
-    private let posts: [FeedPost] = []
+    @State private var posts: [DBPost] = []
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -42,9 +41,15 @@ struct FeedView: View {
                 }
             }
             .toolbarBackground(.hidden, for: .navigationBar)
+            .task { await load() }
+            .refreshable { await load() }
         }
         .preferredColorScheme(.dark)
         .onDisappear { path = NavigationPath() }
+    }
+
+    private func load() async {
+        posts = (try? await SupabaseService.fetchFeedPosts()) ?? []
     }
 }
 

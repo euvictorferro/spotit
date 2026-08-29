@@ -1,16 +1,22 @@
 import SwiftUI
+import Supabase
 
 struct FeedPostCard: View {
-    let post: FeedPost
-    @State private var isLiked = false
-    @State private var likeCount = Int.random(in: 40...900)
-    @State private var comments: [Comment]
+    let post: DBPost
+    @State private var isLiked: Bool
+    @State private var likeCount: Int
+    @State private var comments: [Comment] = []
     @State private var showDetails = false
     @State private var showComments = false
 
-    init(post: FeedPost) {
+    init(post: DBPost) {
         self.post = post
-        self._comments = State(initialValue: Comment.sampleFor(post))
+        self._isLiked = State(initialValue: post.likedByMe)
+        self._likeCount = State(initialValue: post.likeCount)
+    }
+
+    private var avatar: SearchableUser {
+        SearchableUser(id: post.userId, username: post.username)
     }
 
     var body: some View {
@@ -27,35 +33,46 @@ struct FeedPostCard: View {
             actions
                 .padding(.top, Theme.Spacing.xs)
 
-            Text("Curtido por **\(post.likedByUsername)** e outros")
-                .font(.footnote)
+            if likeCount > 0 {
+                Text("\(likeCount) curtidas")
+                    .font(.footnote)
+            }
 
-            (Text(post.username).fontWeight(.semibold) + Text(" " + post.caption))
-                .font(.footnote)
+            captionText
         }
         .fullScreenCover(isPresented: $showDetails) {
-            CarDetailPageView(item: WalletItem(feedPost: post))
+            CarDetailPageView(item: WalletItem(dbPost: post))
         }
         .sheet(isPresented: $showComments) {
             CommentsSheet(post: post, comments: $comments)
         }
     }
 
+    @ViewBuilder
+    private var captionText: some View {
+        if let caption = post.caption, !caption.isEmpty {
+            (Text(post.username).fontWeight(.semibold) + Text(" " + caption))
+                .font(.footnote)
+        } else {
+            Text(post.username).fontWeight(.semibold)
+                .font(.footnote)
+        }
+    }
+
     private var header: some View {
         HStack(spacing: Theme.Spacing.sm) {
             NavigationLink {
-                // ponytail: Feed ainda não tem backend real — sem userId real do autor do post até então.
-                UserProfileView(username: post.username, avatarInitials: post.avatarInitials, avatarColors: post.avatarColors, userId: nil)
+                UserProfileView(username: post.username, avatarInitials: avatar.avatarInitials, avatarColors: avatar.avatarColors, userId: post.userId)
             } label: {
                 HStack(spacing: Theme.Spacing.sm) {
                     Circle()
-                        .fill(LinearGradient(colors: post.avatarColors, startPoint: .topLeading, endPoint: .bottomTrailing))
+                        .fill(LinearGradient(colors: avatar.avatarColors, startPoint: .topLeading, endPoint: .bottomTrailing))
                         .frame(width: 30, height: 30)
-                        .overlay(Text(post.avatarInitials).font(.caption2).fontWeight(.bold).foregroundStyle(.white))
+                        .overlay(Text(avatar.avatarInitials).font(.caption2).fontWeight(.bold).foregroundStyle(.white))
 
                     VStack(alignment: .leading, spacing: 1) {
                         Text(post.username).font(.subheadline).fontWeight(.semibold)
-                        Text("\(post.location) · \(post.timeAgo)")
+                        Text(post.createdAt.formatted(.relative(presentation: .named)))
                             .font(.caption2)
                             .foregroundStyle(.secondary)
                     }
@@ -65,14 +82,25 @@ struct FeedPostCard: View {
 
             Spacer()
 
-            if !post.isFollowing {
-                FollowButton()
+            if post.userId != SupabaseService.client.auth.currentSession?.user.id {
+                FollowButton(userId: post.userId)
             }
         }
     }
 
     private var photo: some View {
-        LinearGradient(colors: post.photoGradient, startPoint: .top, endPoint: .bottom)
+        AsyncImage(url: URL(string: post.fotoUrl)) { phase in
+            switch phase {
+            case .success(let image):
+                image.resizable().scaledToFill()
+            default:
+                LinearGradient(
+                    colors: [Theme.rarityColor(post.raridade).opacity(0.6), Theme.rarityColor(post.raridade).opacity(0.15)],
+                    startPoint: .top, endPoint: .bottom
+                )
+                .overlay(Image(systemName: "car.side.fill").foregroundStyle(Theme.rarityColor(post.raridade)))
+            }
+        }
     }
 
     private var valueChip: some View {
@@ -88,8 +116,7 @@ struct FeedPostCard: View {
     private var actions: some View {
         HStack(spacing: Theme.Spacing.md) {
             Button {
-                isLiked.toggle()
-                likeCount += isLiked ? 1 : -1
+                toggleLike()
             } label: {
                 Image(systemName: isLiked ? "heart.fill" : "heart")
                     .foregroundStyle(isLiked ? .red : .primary)
@@ -100,8 +127,8 @@ struct FeedPostCard: View {
             } label: {
                 HStack(spacing: 4) {
                     MessageCircleIcon.icon(size: 20)
-                    if !comments.isEmpty {
-                        Text(comments.count.formattedCount)
+                    if post.commentCount > 0 {
+                        Text(post.commentCount.formattedCount)
                             .font(.subheadline)
                     }
                 }
@@ -124,19 +151,36 @@ struct FeedPostCard: View {
         .buttonStyle(.plain)
     }
 
+    private func toggleLike() {
+        let wasLiked = isLiked
+        isLiked.toggle()
+        likeCount += isLiked ? 1 : -1
+        Task {
+            if let liked = try? await SupabaseService.toggleLike(postId: post.id) {
+                isLiked = liked
+            } else {
+                // reverte se a chamada falhar
+                isLiked = wasLiked
+                likeCount += wasLiked ? 1 : -1
+            }
+        }
+    }
+
     private var shareText: String {
         "Olha esse carro que eu achei no Spot It! 🏎️"
     }
 }
 
-/// Botão "Seguir" → "Seguindo" com estado local — só aparece nos posts de
-/// quem ainda não segue (post.isFollowing == false).
+/// Botão "Seguir" → "Seguindo" com estado real via SupabaseService — mesmo
+/// padrão de UserProfileView.toggleFollow().
 private struct FollowButton: View {
+    let userId: UUID
     @State private var isFollowing = false
+    @State private var isToggling = false
 
     var body: some View {
         Button {
-            isFollowing.toggle()
+            Task { await toggle() }
         } label: {
             Text(isFollowing ? "Seguindo" : "Seguir")
                 .font(.caption)
@@ -150,12 +194,30 @@ private struct FollowButton: View {
                 .foregroundStyle(isFollowing ? Color.primary : Color.white)
         }
         .buttonStyle(.plain)
+        .disabled(isToggling)
+        .task { isFollowing = (try? await SupabaseService.isFollowing(userId: userId)) ?? false }
+    }
+
+    private func toggle() async {
+        isToggling = true
+        defer { isToggling = false }
+        do {
+            if isFollowing {
+                try await SupabaseService.unfollow(userId: userId)
+                isFollowing = false
+            } else {
+                try await SupabaseService.follow(userId: userId)
+                isFollowing = true
+            }
+        } catch {
+            // ponytail: falha silenciosa — botão volta pro estado anterior, sem toast por ora.
+        }
     }
 }
 
 #Preview {
     NavigationStack {
-        FeedPostCard(post: FeedPost.sample[0])
+        FeedPostCard(post: DBPost(id: UUID(), userId: UUID(), username: "rk.spotter", avatarUrl: nil, modelo: "Porsche 911 GT3 RS", raridade: 8, valorEstimadoUsd: 223_000, fotoUrl: "", caption: "track day pack completo", createdAt: Date(), likeCount: 42, commentCount: 3, likedByMe: false))
             .padding()
     }
 }
