@@ -281,7 +281,7 @@ struct ResultView: View {
             try await SupabaseService.saveWalletItem(car: carInfo, fotoUrl: url, lat: nil, lng: nil)
             onFinish()
         } catch {
-            saveError = "Não foi possível salvar. Tenta de novo."
+            saveError = "Erro ao salvar: \(error.localizedDescription)"
         }
         isSaving = false
     }
