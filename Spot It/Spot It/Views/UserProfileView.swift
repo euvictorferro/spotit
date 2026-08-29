@@ -26,6 +26,9 @@ struct UserProfileView: View {
 
     @State private var tab: UserProfileTab = .fotos
     @State private var isFollowing = false
+    @State private var isTogglingFollow = false
+    @State private var followersCount = 0
+    @State private var followingCount = 0
     @State private var openConversationId: UUID?
     @State private var isStartingConversation = false
     @State private var errorMessage: String?
@@ -82,6 +85,20 @@ struct UserProfileView: View {
                 Text("@\(username)").font(.headline)
             }
         }
+        .task { await loadFollowState() }
+    }
+
+    private func loadFollowState() async {
+        do {
+            async let following = SupabaseService.isFollowing(userId: userId)
+            async let counts = SupabaseService.followCounts(userId: userId)
+            isFollowing = try await following
+            let (followers, followingC) = try await counts
+            followersCount = followers
+            followingCount = followingC
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 
     private var header: some View {
@@ -94,9 +111,8 @@ struct UserProfileView: View {
 
                 HStack(spacing: Theme.Spacing.lg) {
                     statColumn(value: "\(posts.count)", label: "posts")
-                    // ponytail: seguidores/seguindo sem dado real ainda — placeholder até ter perfil no backend.
-                    statColumn(value: "—", label: "seguidores")
-                    statColumn(value: "—", label: "seguindo")
+                    statColumn(value: "\(followersCount)", label: "seguidores")
+                    statColumn(value: "\(followingCount)", label: "seguindo")
                 }
             }
 
@@ -104,7 +120,7 @@ struct UserProfileView: View {
 
             HStack(spacing: Theme.Spacing.sm) {
                 Button {
-                    isFollowing.toggle()
+                    Task { await toggleFollow() }
                 } label: {
                     Text(isFollowing ? "Seguindo" : "Seguir")
                         .font(.subheadline).fontWeight(.semibold)
@@ -113,6 +129,7 @@ struct UserProfileView: View {
                 .buttonStyle(.borderedProminent)
                 .tint(isFollowing ? Color(.secondarySystemBackground) : Color.accentColor)
                 .foregroundStyle(isFollowing ? Color.primary : Color.white)
+                .disabled(isTogglingFollow)
 
                 Button {
                     Task { await startConversation() }
@@ -134,6 +151,25 @@ struct UserProfileView: View {
         .padding(.top, Theme.Spacing.xs)
         .navigationDestination(item: $openConversationId) { conversationId in
             ChatThreadView(conversationId: conversationId, otherUserId: userId, otherUsername: username, otherAvatarUrl: nil)
+        }
+    }
+
+    private func toggleFollow() async {
+        errorMessage = nil
+        isTogglingFollow = true
+        defer { isTogglingFollow = false }
+        do {
+            if isFollowing {
+                try await SupabaseService.unfollow(userId: userId)
+                isFollowing = false
+                followersCount -= 1
+            } else {
+                try await SupabaseService.follow(userId: userId)
+                isFollowing = true
+                followersCount += 1
+            }
+        } catch {
+            errorMessage = error.localizedDescription
         }
     }
 
