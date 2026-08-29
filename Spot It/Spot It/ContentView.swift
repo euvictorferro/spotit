@@ -8,10 +8,23 @@
 import SwiftUI
 
 struct ContentView: View {
+    @EnvironmentObject private var authService: AuthService
     @State private var showCapture = false
     @StateObject private var captureButtonVisibility = CaptureButtonVisibility()
 
     var body: some View {
+        Group {
+            if authService.session == nil {
+                AuthView()
+            } else if authService.profile == nil {
+                OnboardingView()
+            } else {
+                mainTabs
+            }
+        }
+    }
+
+    private var mainTabs: some View {
         ZStack(alignment: .bottomTrailing) {
             TabView {
                 FeedView()
@@ -55,5 +68,5 @@ struct ContentView: View {
 }
 
 #Preview {
-    ContentView()
+    ContentView().environmentObject(AuthService())
 }

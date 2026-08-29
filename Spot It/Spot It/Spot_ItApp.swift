@@ -9,9 +9,13 @@ import SwiftUI
 
 @main
 struct Spot_ItApp: App {
+    @StateObject private var authService = AuthService()
+
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .environmentObject(authService)
+                .task { await authService.start() }
         }
     }
 }
