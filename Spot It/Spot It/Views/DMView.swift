@@ -17,10 +17,17 @@ struct DMView: View {
     // Reseta a navegação sempre que a aba fica inativa — sem isso, sair
     // pro perfil de alguém e trocar de aba deixava o DM "preso" lá.
     @State private var path = NavigationPath()
+    @State private var errorMessage: String?
 
     var body: some View {
         NavigationStack(path: $path) {
             VStack(spacing: Theme.Spacing.md) {
+                if let errorMessage {
+                    Text(errorMessage)
+                        .font(.footnote)
+                        .foregroundStyle(.red)
+                        .padding(.top, Theme.Spacing.sm)
+                }
                 if summaries.isEmpty {
                     EmptyStateView(icon: "message", message: "Nenhuma mensagem ainda. Suas conversas aparecem aqui.")
                 } else {
@@ -31,6 +38,7 @@ struct DMView: View {
                         ForEach(summaries.filter { $0.otherUsername.localizedCaseInsensitiveContains(search) || search.isEmpty }) { conversation in
                             NavigationLink(destination: ChatThreadView(
                                 conversationId: conversation.id,
+                                otherUserId: conversation.otherUserId,
                                 otherUsername: conversation.otherUsername,
                                 otherAvatarUrl: conversation.otherAvatarUrl
                             )) {
@@ -65,7 +73,12 @@ struct DMView: View {
 
     private func load() async {
         isLoading = true
-        summaries = (try? await SupabaseService.fetchConversations()) ?? []
+        errorMessage = nil
+        do {
+            summaries = try await SupabaseService.fetchConversations()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
         isLoading = false
     }
 
@@ -136,12 +149,14 @@ struct DMView: View {
 
 struct ChatThreadView: View {
     let conversationId: UUID
+    let otherUserId: UUID
     let otherUsername: String
     let otherAvatarUrl: String?
 
     @State private var messages: [DBMessage] = []
     @State private var myUserId: UUID?
     @State private var draft = ""
+    @State private var errorMessage: String?
     @EnvironmentObject private var captureButtonVisibility: CaptureButtonVisibility
     @FocusState private var isDraftFocused: Bool
 
@@ -187,6 +202,13 @@ struct ChatThreadView: View {
             .scrollDismissesKeyboard(.interactively)
             .onTapGesture { isDraftFocused = false }
 
+            if let errorMessage {
+                Text(errorMessage)
+                    .font(.footnote)
+                    .foregroundStyle(.red)
+                    .padding(.horizontal, Theme.Spacing.md)
+            }
+
             Divider()
 
             HStack(spacing: Theme.Spacing.sm) {
@@ -212,8 +234,7 @@ struct ChatThreadView: View {
         .toolbar {
             ToolbarItem(placement: .principal) {
                 NavigationLink {
-                    // ponytail: header do chat ainda não guarda o userId do outro usuário — usa placeholder até a Task 4 (ou nova) propagar o id real aqui.
-                    UserProfileView(username: otherUsername, avatarInitials: avatarInitials, avatarColors: avatarColors, userId: UUID())
+                    UserProfileView(username: otherUsername, avatarInitials: avatarInitials, avatarColors: avatarColors, userId: otherUserId)
                 } label: {
                     Text(otherUsername)
                         .font(.headline)
@@ -231,15 +252,25 @@ struct ChatThreadView: View {
 
     private func load() async {
         myUserId = SupabaseService.client.auth.currentSession?.user.id
-        messages = (try? await SupabaseService.fetchMessages(conversationId: conversationId)) ?? []
+        errorMessage = nil
+        do {
+            messages = try await SupabaseService.fetchMessages(conversationId: conversationId)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 
     private func send() async {
         let text = draft.trimmingCharacters(in: .whitespaces)
         guard !text.isEmpty else { return }
-        draft = ""
-        try? await SupabaseService.sendMessage(conversationId: conversationId, text: text)
-        messages = (try? await SupabaseService.fetchMessages(conversationId: conversationId)) ?? []
+        errorMessage = nil
+        do {
+            try await SupabaseService.sendMessage(conversationId: conversationId, text: text)
+            draft = ""
+            messages = try await SupabaseService.fetchMessages(conversationId: conversationId)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 }
 

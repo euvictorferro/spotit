@@ -133,7 +133,7 @@ struct UserProfileView: View {
         }
         .padding(.top, Theme.Spacing.xs)
         .navigationDestination(item: $openConversationId) { conversationId in
-            ChatThreadView(conversationId: conversationId, otherUsername: username, otherAvatarUrl: nil)
+            ChatThreadView(conversationId: conversationId, otherUserId: userId, otherUsername: username, otherAvatarUrl: nil)
         }
     }
 
