@@ -2,7 +2,8 @@ import SwiftUI
 
 /// Busca de usuários — quinta aba do menu, entre DM e Wallet. Reaproveita o
 /// mesmo cabeçalho de busca do DM e navega pro mesmo UserProfileView usado
-/// no resto do app.
+/// no resto do app. Busca real contra `profiles` (tabela pública desde a
+/// migration 0004) — sem sistema de social graph, só username/id/avatar.
 struct SearchUsersView: View {
     @State private var search = ""
     @FocusState private var isSearchFocused: Bool
@@ -10,21 +11,25 @@ struct SearchUsersView: View {
     // perfil de alguém e trocar de aba deixava a busca "presa" lá.
     @State private var path = NavigationPath()
 
-    // Sem backend de usuários/social ainda — sem resultados até ter busca real.
-    private var results: [SearchableUser] { [] }
+    @State private var results: [SearchableUser] = []
+    @State private var isLoading = false
+    @State private var errorMessage: String?
 
     var body: some View {
         NavigationStack(path: $path) {
             VStack(spacing: Theme.Spacing.md) {
                 searchField
 
-                if results.isEmpty {
-                    EmptyStateView(icon: "person.crop.circle.badge.questionmark", message: search.isEmpty ? "Busca de usuários ainda não disponível." : "Ninguém encontrado.")
+                if let errorMessage {
+                    EmptyStateView(icon: "exclamationmark.triangle", message: errorMessage)
+                } else if search.isEmpty {
+                    EmptyStateView(icon: "person.crop.circle.badge.questionmark", message: "Digite um username pra buscar.")
+                } else if results.isEmpty && !isLoading {
+                    EmptyStateView(icon: "person.crop.circle.badge.questionmark", message: "Ninguém encontrado.")
                 } else {
                     List(results) { user in
                         NavigationLink {
-                            // ponytail: Busca ainda não tem backend real — sem userId real do usuário encontrado até então.
-                            UserProfileView(username: user.username, avatarInitials: user.avatarInitials, avatarColors: user.avatarColors, userId: UUID())
+                            UserProfileView(username: user.username, avatarInitials: user.avatarInitials, avatarColors: user.avatarColors, userId: user.id)
                         } label: {
                             row(user)
                         }
@@ -45,6 +50,26 @@ struct SearchUsersView: View {
             path = NavigationPath()
             isSearchFocused = false
         }
+        .onChange(of: search) { _, newValue in
+            Task { await search(query: newValue) }
+        }
+    }
+
+    private func search(query: String) async {
+        let trimmed = query.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else {
+            results = []
+            errorMessage = nil
+            return
+        }
+        isLoading = true
+        do {
+            results = try await SupabaseService.searchProfiles(username: trimmed)
+            errorMessage = nil
+        } catch {
+            errorMessage = "Não deu pra buscar agora. Tenta de novo."
+        }
+        isLoading = false
     }
 
     private var searchField: some View {

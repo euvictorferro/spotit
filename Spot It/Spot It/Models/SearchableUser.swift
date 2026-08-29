@@ -1,20 +1,29 @@
 import SwiftUI
 
-/// Diretório de usuários pra busca — hoje é a união dos usernames que já
-/// aparecem no Feed/Ranking/DM (mock). Vira uma tabela de usuários real do
-/// Supabase quando tivermos auth e cadastro de perfil.
+/// Resultado de busca — construído a partir de `profiles` real
+/// (SupabaseService.searchProfiles). `id` é o user_id de verdade, não
+/// gerado localmente — precisa bater com auth.uid() em RLS/DM.
 struct SearchableUser: Identifiable {
-    let id = UUID()
+    let id: UUID
     let username: String
     let avatarInitials: String
     let avatarColors: [Color]
 
-    static let sample: [SearchableUser] = [
-        SearchableUser(username: "motor_teresa", avatarInitials: "MT", avatarColors: [.red, .orange]),
-        SearchableUser(username: "rk.spotter", avatarInitials: "RK", avatarColors: [.purple, .indigo]),
-        SearchableUser(username: "jsilva_cars", avatarInitials: "JS", avatarColors: [.blue, .cyan]),
-        SearchableUser(username: "dudda.cars", avatarInitials: "DC", avatarColors: [.pink, .purple]),
-        SearchableUser(username: "lu.exotics", avatarInitials: "LE", avatarColors: [.green, .mint]),
-        SearchableUser(username: "carspotter_fl", avatarInitials: "CF", avatarColors: [.teal, .blue]),
-    ]
+    /// Sem cor de avatar salva no backend — deriva 2 cores determinísticas
+    /// a partir do hash do username, pra cada pessoa ter uma cor estável
+    /// (não muda a cada busca) sem precisar de coluna nova.
+    init(id: UUID, username: String) {
+        self.id = id
+        self.username = username
+        let parts = username.split(separator: "_").flatMap { $0.split(separator: ".") }
+        let initials = parts.compactMap { $0.first }.prefix(2).map(String.init).joined().uppercased()
+        self.avatarInitials = initials.isEmpty ? String(username.prefix(2)).uppercased() : initials
+
+        let palette: [[Color]] = [
+            [.red, .orange], [.purple, .indigo], [.blue, .cyan],
+            [.pink, .purple], [.green, .mint], [.teal, .blue],
+        ]
+        let index = abs(username.hashValue) % palette.count
+        self.avatarColors = palette[index]
+    }
 }

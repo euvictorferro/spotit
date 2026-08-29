@@ -378,4 +378,19 @@ struct SupabaseService {
             .insert(NewMessage(conversation_id: conversationId, sender_id: myId, text: text))
             .execute()
     }
+
+    static func searchProfiles(username: String) async throws -> [SearchableUser] {
+        try ensureSignedIn()
+        struct ProfileRow: Decodable {
+            let id: UUID
+            let username: String
+        }
+        let rows: [ProfileRow] = try await client.from("profiles")
+            .select("id, username")
+            .ilike("username", pattern: "%\(username)%")
+            .limit(20)
+            .execute()
+            .value
+        return rows.map { SearchableUser(id: $0.id, username: $0.username) }
+    }
 }
