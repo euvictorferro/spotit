@@ -53,7 +53,7 @@ struct NotificationsView: View {
                 username: username,
                 avatarInitials: avatarInitials(for: username),
                 avatarColors: avatarColors(for: username),
-                userId: UUID()
+                userId: nil
             )
         }
         .fullScreenCover(item: $detailItem) { item in

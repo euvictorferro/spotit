@@ -22,7 +22,7 @@ struct UserProfileView: View {
     let username: String
     let avatarInitials: String
     let avatarColors: [Color]
-    let userId: UUID
+    let userId: UUID?
 
     @State private var tab: UserProfileTab = .fotos
     @State private var isFollowing = false
@@ -33,7 +33,7 @@ struct UserProfileView: View {
     @State private var isStartingConversation = false
     @State private var errorMessage: String?
 
-    init(username: String, avatarInitials: String, avatarColors: [Color], userId: UUID) {
+    init(username: String, avatarInitials: String, avatarColors: [Color], userId: UUID?) {
         self.username = username
         self.avatarInitials = avatarInitials
         self.avatarColors = avatarColors
@@ -89,6 +89,8 @@ struct UserProfileView: View {
     }
 
     private func loadFollowState() async {
+        // ponytail: userId nil = Feed/Notificações ainda sem backend real (mock) — sem rede, sem contagens.
+        guard let userId else { return }
         do {
             async let following = SupabaseService.isFollowing(userId: userId)
             async let counts = SupabaseService.followCounts(userId: userId)
@@ -111,35 +113,37 @@ struct UserProfileView: View {
 
                 HStack(spacing: Theme.Spacing.lg) {
                     statColumn(value: "\(posts.count)", label: "posts")
-                    statColumn(value: "\(followersCount)", label: "seguidores")
-                    statColumn(value: "\(followingCount)", label: "seguindo")
+                    statColumn(value: userId != nil ? "\(followersCount)" : "—", label: "seguidores")
+                    statColumn(value: userId != nil ? "\(followingCount)" : "—", label: "seguindo")
                 }
             }
 
             Text(username).font(.subheadline).fontWeight(.semibold)
 
-            HStack(spacing: Theme.Spacing.sm) {
-                Button {
-                    Task { await toggleFollow() }
-                } label: {
-                    Text(isFollowing ? "Seguindo" : "Seguir")
-                        .font(.subheadline).fontWeight(.semibold)
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(isFollowing ? Color(.secondarySystemBackground) : Color.accentColor)
-                .foregroundStyle(isFollowing ? Color.primary : Color.white)
-                .disabled(isTogglingFollow)
+            if userId != nil {
+                HStack(spacing: Theme.Spacing.sm) {
+                    Button {
+                        Task { await toggleFollow() }
+                    } label: {
+                        Text(isFollowing ? "Seguindo" : "Seguir")
+                            .font(.subheadline).fontWeight(.semibold)
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(isFollowing ? Color(.secondarySystemBackground) : Color.accentColor)
+                    .foregroundStyle(isFollowing ? Color.primary : Color.white)
+                    .disabled(isTogglingFollow)
 
-                Button {
-                    Task { await startConversation() }
-                } label: {
-                    Text("Mensagem")
-                        .font(.subheadline).fontWeight(.semibold)
-                        .frame(maxWidth: .infinity)
+                    Button {
+                        Task { await startConversation() }
+                    } label: {
+                        Text("Mensagem")
+                            .font(.subheadline).fontWeight(.semibold)
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                    .disabled(isStartingConversation)
                 }
-                .buttonStyle(.bordered)
-                .disabled(isStartingConversation)
             }
 
             if let errorMessage {
@@ -150,11 +154,14 @@ struct UserProfileView: View {
         }
         .padding(.top, Theme.Spacing.xs)
         .navigationDestination(item: $openConversationId) { conversationId in
-            ChatThreadView(conversationId: conversationId, otherUserId: userId, otherUsername: username, otherAvatarUrl: nil)
+            if let userId {
+                ChatThreadView(conversationId: conversationId, otherUserId: userId, otherUsername: username, otherAvatarUrl: nil)
+            }
         }
     }
 
     private func toggleFollow() async {
+        guard let userId else { return }
         errorMessage = nil
         isTogglingFollow = true
         defer { isTogglingFollow = false }
@@ -162,7 +169,7 @@ struct UserProfileView: View {
             if isFollowing {
                 try await SupabaseService.unfollow(userId: userId)
                 isFollowing = false
-                followersCount -= 1
+                followersCount = max(0, followersCount - 1)
             } else {
                 try await SupabaseService.follow(userId: userId)
                 isFollowing = true
@@ -174,6 +181,7 @@ struct UserProfileView: View {
     }
 
     private func startConversation() async {
+        guard let userId else { return }
         errorMessage = nil
         isStartingConversation = true
         defer { isStartingConversation = false }
@@ -243,6 +251,6 @@ struct UserProfileView: View {
 
 #Preview {
     NavigationStack {
-        UserProfileView(username: "rk.spotter", avatarInitials: "RK", avatarColors: [.purple, .indigo], userId: UUID())
+        UserProfileView(username: "rk.spotter", avatarInitials: "RK", avatarColors: [.purple, .indigo], userId: nil)
     }
 }

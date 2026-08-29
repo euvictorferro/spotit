@@ -45,7 +45,7 @@ struct FeedPostCard: View {
         HStack(spacing: Theme.Spacing.sm) {
             NavigationLink {
                 // ponytail: Feed ainda não tem backend real — sem userId real do autor do post até então.
-                UserProfileView(username: post.username, avatarInitials: post.avatarInitials, avatarColors: post.avatarColors, userId: UUID())
+                UserProfileView(username: post.username, avatarInitials: post.avatarInitials, avatarColors: post.avatarColors, userId: nil)
             } label: {
                 HStack(spacing: Theme.Spacing.sm) {
                     Circle()

@@ -81,6 +81,7 @@ struct ProfileView: View {
             }
             .onAppear {
                 applyProfile(authService.profile)
+                Task { await loadFollowCounts() }
             }
             .overlay {
                 if isLoading && items.isEmpty {
@@ -226,15 +227,17 @@ struct ProfileView: View {
     private func load() async {
         isLoading = true
         items = (try? await SupabaseService.fetchWalletItems()) ?? []
-
-        if let userId = authService.session?.user.id {
-            if let (followers, following) = try? await SupabaseService.followCounts(userId: userId) {
-                followersCount = followers
-                followingCount = following
-            }
-        }
-
+        await loadFollowCounts()
         isLoading = false
+    }
+
+    /// Só as contagens — chamada isolada no onAppear pra refletir follows
+    /// feitos em outra tela sem recarregar a wallet inteira de novo.
+    private func loadFollowCounts() async {
+        guard let userId = authService.session?.user.id,
+              let counts = try? await SupabaseService.followCounts(userId: userId) else { return }
+        followersCount = counts.followers
+        followingCount = counts.following
     }
 
     private func applyProfile(_ profile: Profile?) {

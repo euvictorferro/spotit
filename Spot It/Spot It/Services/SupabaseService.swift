@@ -401,9 +401,16 @@ struct SupabaseService {
             let follower_id: UUID
             let following_id: UUID
         }
-        try await client.from("follows")
-            .insert(NewFollow(follower_id: myId, following_id: userId))
-            .execute()
+        do {
+            try await client.from("follows")
+                .insert(NewFollow(follower_id: myId, following_id: userId))
+                .execute()
+        } catch {
+            // Já segue (duplicata na unique constraint) — não é erro de verdade pro usuário.
+            if !error.localizedDescription.contains("duplicate key") {
+                throw error
+            }
+        }
     }
 
     static func unfollow(userId: UUID) async throws {
