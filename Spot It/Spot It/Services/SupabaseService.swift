@@ -451,4 +451,162 @@ struct SupabaseService {
             .execute()
         return (followersResponse.count ?? 0, followingResponse.count ?? 0)
     }
+
+    static func createPost(walletItemId: UUID?, modelo: String, raridade: Int, valorEstimadoUsd: Double, fotoUrl: String, caption: String?) async throws {
+        try ensureSignedIn()
+        guard let myId = client.auth.currentSession?.user.id else { throw SupabaseError.notSignedIn }
+        struct NewPost: Encodable {
+            let user_id: UUID
+            let wallet_item_id: UUID?
+            let modelo: String
+            let raridade: Int
+            let valor_estimado_usd: Double
+            let foto_url: String
+            let caption: String?
+        }
+        try await client.from("posts")
+            .insert(NewPost(user_id: myId, wallet_item_id: walletItemId, modelo: modelo, raridade: raridade, valor_estimado_usd: valorEstimadoUsd, foto_url: fotoUrl, caption: caption))
+            .execute()
+    }
+
+    static func fetchFeedPosts() async throws -> [DBPost] {
+        try ensureSignedIn()
+        let myId = client.auth.currentSession?.user.id
+
+        struct PostRow: Decodable {
+            let id: UUID
+            let user_id: UUID
+            let modelo: String
+            let raridade: Int
+            let valor_estimado_usd: Double
+            let foto_url: String
+            let caption: String?
+            let created_at: Date
+        }
+
+        let rows: [PostRow] = try await client.from("posts")
+            .select()
+            .order("created_at", ascending: false)
+            .limit(50)
+            .execute()
+            .value
+
+        var posts: [DBPost] = []
+        for row in rows {
+            struct ProfileRow: Decodable { let username: String; let avatar_url: String? }
+            guard let profile: ProfileRow = try? await client.from("profiles")
+                .select("username, avatar_url")
+                .eq("id", value: row.user_id)
+                .single()
+                .execute()
+                .value
+            else { continue }
+
+            let likeCount: Int = (try? await client.from("likes")
+                .select("post_id", head: true, count: .exact)
+                .eq("post_id", value: row.id)
+                .execute()
+                .count) ?? 0
+
+            let commentCount: Int = (try? await client.from("comments")
+                .select("id", head: true, count: .exact)
+                .eq("post_id", value: row.id)
+                .execute()
+                .count) ?? 0
+
+            var likedByMe = false
+            if let myId {
+                struct LikeRow: Decodable { let user_id: UUID }
+                let mine: [LikeRow] = (try? await client.from("likes")
+                    .select("user_id")
+                    .eq("post_id", value: row.id)
+                    .eq("user_id", value: myId)
+                    .limit(1)
+                    .execute()
+                    .value) ?? []
+                likedByMe = !mine.isEmpty
+            }
+
+            posts.append(DBPost(
+                id: row.id, userId: row.user_id, username: profile.username, avatarUrl: profile.avatar_url,
+                modelo: row.modelo, raridade: row.raridade, valorEstimadoUsd: row.valor_estimado_usd,
+                fotoUrl: row.foto_url, caption: row.caption, createdAt: row.created_at,
+                likeCount: likeCount, commentCount: commentCount, likedByMe: likedByMe
+            ))
+        }
+        return posts
+    }
+
+    static func toggleLike(postId: UUID) async throws -> Bool {
+        try ensureSignedIn()
+        guard let myId = client.auth.currentSession?.user.id else { throw SupabaseError.notSignedIn }
+
+        struct LikeRow: Decodable { let user_id: UUID }
+        let existing: [LikeRow] = try await client.from("likes")
+            .select("user_id")
+            .eq("post_id", value: postId)
+            .eq("user_id", value: myId)
+            .limit(1)
+            .execute()
+            .value
+
+        if existing.isEmpty {
+            struct NewLike: Encodable { let post_id: UUID; let user_id: UUID }
+            try await client.from("likes")
+                .insert(NewLike(post_id: postId, user_id: myId))
+                .execute()
+            return true
+        } else {
+            try await client.from("likes")
+                .delete()
+                .eq("post_id", value: postId)
+                .eq("user_id", value: myId)
+                .execute()
+            return false
+        }
+    }
+
+    static func fetchComments(postId: UUID) async throws -> [DBComment] {
+        try ensureSignedIn()
+        struct CommentRow: Decodable {
+            let id: UUID
+            let post_id: UUID
+            let user_id: UUID
+            let text: String
+            let created_at: Date
+        }
+        let rows: [CommentRow] = try await client.from("comments")
+            .select()
+            .eq("post_id", value: postId)
+            .order("created_at", ascending: true)
+            .execute()
+            .value
+
+        var comments: [DBComment] = []
+        for row in rows {
+            struct ProfileRow: Decodable { let username: String }
+            guard let profile: ProfileRow = try? await client.from("profiles")
+                .select("username")
+                .eq("id", value: row.user_id)
+                .single()
+                .execute()
+                .value
+            else { continue }
+            comments.append(DBComment(id: row.id, postId: row.post_id, userId: row.user_id, username: profile.username, text: row.text, createdAt: row.created_at))
+        }
+        return comments
+    }
+
+    static func addComment(postId: UUID, text: String) async throws {
+        try ensureSignedIn()
+        guard let myId = client.auth.currentSession?.user.id else { throw SupabaseError.notSignedIn }
+        struct NewComment: Encodable {
+            let post_id: UUID
+            let user_id: UUID
+            let text: String
+        }
+        try await client.from("comments")
+            .insert(NewComment(post_id: postId, user_id: myId, text: text))
+            .execute()
+    }
 }
