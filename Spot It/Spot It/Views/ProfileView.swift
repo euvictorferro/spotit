@@ -31,12 +31,6 @@ struct ProfileView: View {
         return parts.compactMap { $0.first }.prefix(2).map(String.init).joined().uppercased()
     }
 
-    private let ranking = RankingEntry.sample.sorted { $0.walletValueUsd > $1.walletValueUsd }
-
-    private var myPosition: Int {
-        (ranking.firstIndex { $0.isMe } ?? 0) + 1
-    }
-
     private let columns = [GridItem(.flexible(), spacing: 2), GridItem(.flexible(), spacing: 2), GridItem(.flexible(), spacing: 2)]
 
     private var shareText: String {
@@ -108,11 +102,9 @@ struct ProfileView: View {
             HStack(spacing: Theme.Spacing.lg) {
                 avatarView
 
-                HStack(spacing: Theme.Spacing.lg) {
-                    statColumn(value: "\(items.count)", label: "posts")
-                    statColumn(value: "340", label: "seguidores")
-                    statColumn(value: "180", label: "seguindo")
-                }
+                // ponytail: só o stat de posts é real — seguidores/seguindo
+                // voltam quando existir sistema de seguidores no backend.
+                statColumn(value: "\(items.count)", label: "posts")
             }
 
             VStack(alignment: .leading, spacing: 2) {
@@ -192,62 +184,40 @@ struct ProfileView: View {
         .buttonStyle(.plain)
     }
 
+    @ViewBuilder
     private var photosGrid: some View {
-        LazyVGrid(columns: columns, spacing: 2) {
-            ForEach(items) { item in
-                LinearGradient(
-                    colors: [Theme.rarityColor(item.raridade).opacity(0.6), Theme.rarityColor(item.raridade).opacity(0.15)],
-                    startPoint: .top, endPoint: .bottom
-                )
-                .aspectRatio(1, contentMode: .fill)
-                .overlay(Image(systemName: "car.side.fill").foregroundStyle(Theme.rarityColor(item.raridade)))
-                .clipped()
+        if items.isEmpty {
+            if !isLoading {
+                EmptyStateView(icon: "photo.on.rectangle", message: "Você ainda não fotografou nenhum carro.")
+            }
+        } else {
+            LazyVGrid(columns: columns, spacing: 2) {
+                ForEach(items) { item in
+                    AsyncImage(url: URL(string: item.fotoUrl)) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image.resizable().scaledToFill()
+                        default:
+                            LinearGradient(
+                                colors: [Theme.rarityColor(item.raridade).opacity(0.6), Theme.rarityColor(item.raridade).opacity(0.15)],
+                                startPoint: .top, endPoint: .bottom
+                            )
+                            .overlay(Image(systemName: "car.side.fill").foregroundStyle(Theme.rarityColor(item.raridade)))
+                        }
+                    }
+                    .aspectRatio(1, contentMode: .fill)
+                    .clipped()
+                }
             }
         }
     }
 
     private var rankingSection: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-            HStack {
-                Label("Ranking", systemImage: "trophy")
-                    .font(.headline)
-                Spacer()
-                Text("Você: #\(myPosition)")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            }
-
-            ForEach(Array(ranking.enumerated()), id: \.element.id) { index, entry in
-                HStack(spacing: Theme.Spacing.sm) {
-                    Text("#\(index + 1)")
-                        .font(.subheadline).fontWeight(.bold)
-                        .foregroundStyle(index == 0 ? .yellow : .secondary)
-                        .frame(width: 28, alignment: .leading)
-
-                    Circle()
-                        .fill(LinearGradient(colors: entry.avatarColors, startPoint: .topLeading, endPoint: .bottomTrailing))
-                        .frame(width: 34, height: 34)
-                        .overlay(Text(entry.avatarInitials).font(.caption2).fontWeight(.bold).foregroundStyle(.white))
-
-                    Text(entry.username)
-                        .font(.subheadline)
-                        .fontWeight(entry.isMe ? .bold : .regular)
-
-                    Spacer()
-
-                    Text(entry.walletValueUsd.asDollars)
-                        .font(.system(.footnote, design: .rounded, weight: .bold))
-                }
-                .padding(.vertical, 4)
-                .padding(.horizontal, entry.isMe ? Theme.Spacing.sm : 0)
-                .background {
-                    if entry.isMe {
-                        RoundedRectangle(cornerRadius: 8).fill(Color.accentColor.opacity(0.12))
-                    }
-                }
-            }
-        }
-        .card()
+        // Ranking entre usuários exigiria ler wallet_items de outras
+        // contas, mas a RLS só libera cada usuário ler os próprios itens —
+        // não tem dado real pra mostrar até existir uma função de backend
+        // dedicada (agregação sem expor linha por linha).
+        EmptyStateView(icon: "trophy", message: "Ranking ainda não está disponível.")
     }
 
     private func load() async {

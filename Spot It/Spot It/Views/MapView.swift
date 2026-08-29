@@ -36,13 +36,20 @@ struct MapView: View {
         }
         .navigationTitle("Mapa")
         .navigationBarTitleDisplayMode(.inline)
+        .overlay {
+            if spots.isEmpty {
+                EmptyStateView(icon: "mappin.slash", message: "Nenhum local registrado ainda.")
+            }
+        }
         .overlay(alignment: .bottom) {
-            Text(scope == .wallet ? "Mostrando: só suas fotos" : "Mostrando: você + quem você segue")
-                .font(.caption)
-                .padding(.horizontal, Theme.Spacing.md)
-                .padding(.vertical, Theme.Spacing.sm)
-                .background(.thinMaterial, in: Capsule())
-                .padding(.bottom, Theme.Spacing.lg)
+            if !spots.isEmpty {
+                Text(scope == .wallet ? "Mostrando: só suas fotos" : "Mostrando: você + quem você segue")
+                    .font(.caption)
+                    .padding(.horizontal, Theme.Spacing.md)
+                    .padding(.vertical, Theme.Spacing.sm)
+                    .background(.thinMaterial, in: Capsule())
+                    .padding(.bottom, Theme.Spacing.lg)
+            }
         }
         .fullScreenCover(item: $detailItem) { item in
             CarDetailPageView(item: item)
