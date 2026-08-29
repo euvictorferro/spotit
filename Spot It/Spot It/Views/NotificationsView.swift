@@ -1,17 +1,25 @@
 import SwiftUI
 
 struct NotificationsView: View {
-    @State private var notifications: [AppNotification] = []
-    @State private var pushUsername: String?
+    @State private var notifications: [DBNotification] = []
+    @State private var pushUserId: UUID?
     @State private var detailItem: WalletItem?
+
+    private func section(for date: Date) -> String {
+        let calendar = Calendar.current
+        if calendar.isDateInToday(date) { return "Hoje" }
+        if calendar.isDateInYesterday(date) { return "Ontem" }
+        if let days = calendar.dateComponents([.day], from: date, to: Date()).day, days < 7 { return "Esta Semana" }
+        return "Mais Antigo"
+    }
 
     private var sections: [String] {
         var seen = Set<String>()
-        return notifications.map(\.section).filter { seen.insert($0).inserted }
+        return notifications.map { section(for: $0.createdAt) }.filter { seen.insert($0).inserted }
     }
 
-    private func notifications(in section: String) -> [AppNotification] {
-        notifications.filter { $0.section == section }
+    private func notifications(in section: String) -> [DBNotification] {
+        notifications.filter { self.section(for: $0.createdAt) == section }
     }
 
     /// Pessoas que já te seguem mas você ainda não segue de volta — some até
@@ -39,7 +47,7 @@ struct NotificationsView: View {
                             ForEach(suggestions) { user in
                                 suggestionRow(user)
                                     .contentShape(Rectangle())
-                                    .onTapGesture { pushUsername = user.username }
+                                    .onTapGesture { pushUserId = user.id }
                             }
                         }
                     }
@@ -47,13 +55,15 @@ struct NotificationsView: View {
             }
         }
         .navigationTitle("Notificações")
-        .navigationDestination(item: $pushUsername) { username in
-            // ponytail: Notificações ainda não tem backend real — sem userId real até então.
+        .task { await load() }
+        .refreshable { await load() }
+        .navigationDestination(item: $pushUserId) { userId in
+            let user = actor(for: userId)
             UserProfileView(
-                username: username,
-                avatarInitials: avatarInitials(for: username),
-                avatarColors: avatarColors(for: username),
-                userId: nil
+                username: user.username,
+                avatarInitials: user.avatarInitials,
+                avatarColors: user.avatarColors,
+                userId: userId
             )
         }
         .fullScreenCover(item: $detailItem) { item in
@@ -61,18 +71,36 @@ struct NotificationsView: View {
         }
     }
 
-    private func avatarInitials(for username: String) -> String {
-        notifications.first { $0.username == username }?.avatarInitials
-            ?? suggestions.first { $0.username == username }?.avatarInitials ?? ""
+    private func load() async {
+        notifications = (try? await SupabaseService.fetchNotifications()) ?? []
     }
 
-    private func avatarColors(for username: String) -> [Color] {
-        notifications.first { $0.username == username }?.avatarColors
-            ?? suggestions.first { $0.username == username }?.avatarColors ?? [.gray]
+    private func actor(for userId: UUID) -> SearchableUser {
+        if let notification = notifications.first(where: { $0.actorId == userId }) {
+            return SearchableUser(id: userId, username: notification.actorUsername)
+        }
+        if let user = suggestions.first(where: { $0.id == userId }) { return user }
+        return SearchableUser(id: userId, username: "")
     }
 
-    private func row(_ notification: AppNotification) -> some View {
-        HStack(spacing: Theme.Spacing.sm) {
+    private func text(for kind: NotificationKind) -> String {
+        switch kind {
+        case .like: return "curtiu seu post"
+        case .comment: return "comentou no seu post"
+        case .follow: return "começou a seguir você"
+        }
+    }
+
+    private func timeAgo(_ date: Date) -> String {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .abbreviated
+        formatter.locale = Locale(identifier: "pt_BR")
+        return formatter.localizedString(for: date, relativeTo: Date())
+    }
+
+    private func row(_ notification: DBNotification) -> some View {
+        let actor = SearchableUser(id: notification.actorId, username: notification.actorUsername)
+        return HStack(spacing: Theme.Spacing.sm) {
             if !notification.isRead {
                 Circle().fill(Color.accentColor).frame(width: 7, height: 7)
             } else {
@@ -80,7 +108,7 @@ struct NotificationsView: View {
             }
 
             Circle()
-                .fill(LinearGradient(colors: notification.avatarColors, startPoint: .topLeading, endPoint: .bottomTrailing))
+                .fill(LinearGradient(colors: actor.avatarColors, startPoint: .topLeading, endPoint: .bottomTrailing))
                 .frame(width: 38, height: 38)
                 .overlay(
                     Image(systemName: icon(for: notification.kind))
@@ -90,15 +118,15 @@ struct NotificationsView: View {
                         .background(color(for: notification.kind), in: Circle())
                         .offset(x: 13, y: 13)
                 )
-                .overlay(Text(notification.avatarInitials).font(.caption2).fontWeight(.bold).foregroundStyle(.white))
+                .overlay(Text(actor.avatarInitials).font(.caption2).fontWeight(.bold).foregroundStyle(.white))
 
-            (Text(notification.username).fontWeight(.semibold) + Text(" " + notification.text))
+            (Text(notification.actorUsername).fontWeight(.semibold) + Text(" " + text(for: notification.kind)))
                 .font(.subheadline)
                 .foregroundStyle(notification.isRead ? .secondary : .primary)
 
             Spacer()
 
-            Text(notification.timeAgo)
+            Text(timeAgo(notification.createdAt))
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
         }
@@ -124,16 +152,21 @@ struct NotificationsView: View {
         .padding(.vertical, 2)
     }
 
-    private func open(_ notification: AppNotification) {
+    private func open(_ notification: DBNotification) {
         if let index = notifications.firstIndex(where: { $0.id == notification.id }) {
             notifications[index].isRead = true
         }
+        Task { try? await SupabaseService.markNotificationRead(id: notification.id) }
+
         switch notification.kind {
         case .follow:
-            pushUsername = notification.username
+            pushUserId = notification.actorId
         case .like, .comment:
-            if let post = notification.relatedPost {
-                detailItem = WalletItem(feedPost: post)
+            guard let postId = notification.postId else { return }
+            Task {
+                if let post = (try? await SupabaseService.fetchFeedPosts())?.first(where: { $0.id == postId }) {
+                    detailItem = WalletItem(dbPost: post)
+                }
             }
         }
     }
