@@ -83,7 +83,10 @@ export default async function handler(req: Req, res: Res) {
 
   const message = await anthropic.messages.create({
     model: 'claude-sonnet-4-5',
-    max_tokens: 1024,
+    // 1024 cortava a resposta no meio em carros com bastante texto pros
+    // campos extras (design/raridade/mercado/variantes), quebrando o JSON e
+    // fazendo cair no fallback de "não reconhecido" mesmo em carros comuns.
+    max_tokens: 2048,
     system: SYSTEM_PROMPT,
     messages: [
       {
@@ -107,6 +110,10 @@ export default async function handler(req: Req, res: Res) {
   try {
     parsed = JSON.parse(cleaned);
   } catch {
+    // Loga o motivo real (visível nos logs da Vercel) em vez de mascarar
+    // tudo como "carro não reconhecido" — se stop_reason for "max_tokens",
+    // a resposta foi cortada no meio do JSON, não é falta de reconhecimento.
+    console.error('Falha ao parsear resposta do Claude', { stopReason: message.stop_reason, raw: cleaned.slice(-200) });
     parsed = { reconhecido: false };
   }
 
