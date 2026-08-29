@@ -5,7 +5,6 @@ struct FeedPostCard: View {
     let post: DBPost
     @State private var isLiked: Bool
     @State private var likeCount: Int
-    @State private var comments: [Comment] = []
     @State private var showDetails = false
     @State private var showComments = false
 
@@ -44,7 +43,7 @@ struct FeedPostCard: View {
             CarDetailPageView(item: WalletItem(dbPost: post))
         }
         .sheet(isPresented: $showComments) {
-            CommentsSheet(post: post, comments: $comments)
+            CommentsSheet(post: post)
         }
     }
 
