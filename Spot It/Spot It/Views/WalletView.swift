@@ -29,13 +29,18 @@ struct WalletView: View {
                     header
                     tabPicker
 
-                    switch tab {
-                    case .summary:
-                        WalletSummaryView(items: items)
-                    case .all:
-                        WalletAllView(items: $items)
-                    case .sets:
-                        WalletSetsView(items: items)
+                    if items.isEmpty && !isLoading {
+                        EmptyStateView(icon: "car.fill", message: "Sua Wallet está vazia. Tira uma foto de um carro raro pra começar sua coleção.")
+                            .padding(.top, Theme.Spacing.lg)
+                    } else {
+                        switch tab {
+                        case .summary:
+                            WalletSummaryView(items: items)
+                        case .all:
+                            WalletAllView(items: $items)
+                        case .sets:
+                            WalletSetsView(items: items)
+                        }
                     }
                 }
                 .padding(Theme.Spacing.md)
@@ -126,9 +131,7 @@ struct WalletView: View {
 
     private func load() async {
         isLoading = true
-        let fetched = (try? await SupabaseService.fetchWalletItems()) ?? []
-        // Sem itens reais salvos ainda — mostra exemplos pra visualizar a Wallet cheia.
-        items = fetched.isEmpty ? WalletItem.sample : fetched
+        items = (try? await SupabaseService.fetchWalletItems()) ?? []
         isLoading = false
     }
 }
