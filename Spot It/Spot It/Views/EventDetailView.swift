@@ -3,18 +3,23 @@ import MapKit
 import EventKit
 
 struct EventDetailView: View {
-    let event: CarEvent
-    @Binding var isGoing: Bool
+    @State var event: DBEvent
     @State private var calendarMessage: String?
 
-    private var position: MapCameraPosition {
-        .region(MKCoordinateRegion(center: event.coordinate, span: .init(latitudeDelta: 0.08, longitudeDelta: 0.08)))
+    private var coordinate: CLLocationCoordinate2D? {
+        guard let lat = event.lat, let lng = event.lng else { return nil }
+        return CLLocationCoordinate2D(latitude: lat, longitude: lng)
+    }
+
+    private var position: MapCameraPosition? {
+        guard let coordinate else { return nil }
+        return .region(MKCoordinateRegion(center: coordinate, span: .init(latitudeDelta: 0.08, longitudeDelta: 0.08)))
     }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
-                LinearGradient(colors: event.coverGradient, startPoint: .top, endPoint: .bottom)
+                LinearGradient(colors: [Color(red: 0.05, green: 0.12, blue: 0.2), Color(red: 0.02, green: 0.04, blue: 0.07)], startPoint: .top, endPoint: .bottom)
                     .frame(height: 160)
                     .clipShape(RoundedRectangle(cornerRadius: Theme.cornerRadius))
                     .overlay(alignment: .bottomLeading) {
@@ -25,30 +30,34 @@ struct EventDetailView: View {
                     }
 
                 VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-                    infoRow(icon: "calendar", text: event.dateLabel)
+                    infoRow(icon: "calendar", text: event.eventDate.formatted(date: .abbreviated, time: .shortened))
                     infoRow(icon: "mappin.and.ellipse", text: event.location)
-                    infoRow(icon: "person.2.fill", text: "\(event.attendees) confirmados · organizado por \(event.organizer)")
+                    infoRow(icon: "person.2.fill", text: "\(event.attendeeCount) confirmados · organizado por \(event.organizerUsername)")
                 }
                 .glassCard()
 
-                Text(event.description)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-
-                Map(position: .constant(position)) {
-                    Marker(event.name, systemImage: "car.fill", coordinate: event.coordinate)
-                        .tint(Color.accentColor)
+                if let description = event.description {
+                    Text(description)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
                 }
-                .frame(height: 160)
-                .clipShape(RoundedRectangle(cornerRadius: Theme.cornerRadius))
-                .allowsHitTesting(false)
+
+                if let coordinate, let position {
+                    Map(position: .constant(position)) {
+                        Marker(event.name, systemImage: "car.fill", coordinate: coordinate)
+                            .tint(Color.accentColor)
+                    }
+                    .frame(height: 160)
+                    .clipShape(RoundedRectangle(cornerRadius: Theme.cornerRadius))
+                    .allowsHitTesting(false)
+                }
 
                 HStack(spacing: Theme.Spacing.sm) {
-                    Button(isGoing ? "Confirmado ✓" : "Vou") {
-                        isGoing.toggle()
+                    Button(event.isGoing ? "Confirmado ✓" : "Vou") {
+                        Task { await toggleGoing() }
                     }
                     .buttonStyle(.borderedProminent)
-                    .tint(isGoing ? .green : Color.accentColor)
+                    .tint(event.isGoing ? .green : Color.accentColor)
 
                     Button {
                         addToCalendar()
@@ -79,6 +88,12 @@ struct EventDetailView: View {
         }
     }
 
+    private func toggleGoing() async {
+        guard let nowGoing = try? await SupabaseService.toggleGoing(eventId: event.id) else { return }
+        event.isGoing = nowGoing
+        event.attendeeCount += nowGoing ? 1 : -1
+    }
+
     /// Integração real com o Calendário do iOS (EventKit) — não é mock, cria
     /// o evento de verdade no calendário padrão do usuário.
     private func addToCalendar() {
@@ -93,8 +108,8 @@ struct EventDetailView: View {
                 ekEvent.title = event.name
                 ekEvent.location = event.location
                 ekEvent.notes = event.description
-                ekEvent.startDate = event.startDate
-                ekEvent.endDate = event.endDate
+                ekEvent.startDate = event.eventDate
+                ekEvent.endDate = event.eventDate.addingTimeInterval(3 * 3600)
                 ekEvent.calendar = store.defaultCalendarForNewEvents
                 do {
                     try store.save(ekEvent, span: .thisEvent)
@@ -104,11 +119,5 @@ struct EventDetailView: View {
                 }
             }
         }
-    }
-}
-
-#Preview {
-    NavigationStack {
-        EventDetailView(event: CarEvent.sample[0], isGoing: .constant(false))
     }
 }
