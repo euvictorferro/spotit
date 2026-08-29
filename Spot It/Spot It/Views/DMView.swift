@@ -1,4 +1,5 @@
 import SwiftUI
+import Supabase
 
 private enum DMFilter: String, CaseIterable {
     case all = "All"
@@ -8,8 +9,8 @@ private enum DMFilter: String, CaseIterable {
 }
 
 struct DMView: View {
-    // Sem backend de mensagens ainda — inbox vazia até ter DMs reais.
-    @State private var conversations: [DMConversation] = []
+    @State private var summaries: [ConversationSummary] = []
+    @State private var isLoading = true
     @State private var search = ""
     @State private var filter: DMFilter = .all
     @FocusState private var isSearchFocused: Bool
@@ -20,15 +21,19 @@ struct DMView: View {
     var body: some View {
         NavigationStack(path: $path) {
             VStack(spacing: Theme.Spacing.md) {
-                if conversations.isEmpty {
+                if summaries.isEmpty {
                     EmptyStateView(icon: "message", message: "Nenhuma mensagem ainda. Suas conversas aparecem aqui.")
                 } else {
                     searchField
                     filterChips
 
                     List {
-                        ForEach($conversations.filter { $0.wrappedValue.username.localizedCaseInsensitiveContains(search) || search.isEmpty }) { $conversation in
-                            NavigationLink(destination: ChatThreadView(conversation: $conversation)) {
+                        ForEach(summaries.filter { $0.otherUsername.localizedCaseInsensitiveContains(search) || search.isEmpty }) { conversation in
+                            NavigationLink(destination: ChatThreadView(
+                                conversationId: conversation.id,
+                                otherUsername: conversation.otherUsername,
+                                otherAvatarUrl: conversation.otherAvatarUrl
+                            )) {
                                 row(conversation)
                             }
                             .listRowInsets(EdgeInsets())
@@ -50,10 +55,18 @@ struct DMView: View {
                 }
             }
         }
+        .task { await load() }
+        .refreshable { await load() }
         .onDisappear {
             path = NavigationPath()
             isSearchFocused = false
         }
+    }
+
+    private func load() async {
+        isLoading = true
+        summaries = (try? await SupabaseService.fetchConversations()) ?? []
+        isLoading = false
     }
 
     private var searchField: some View {
@@ -86,16 +99,16 @@ struct DMView: View {
         }
     }
 
-    private func row(_ conversation: DMConversation) -> some View {
+    private func row(_ conversation: ConversationSummary) -> some View {
         HStack(spacing: Theme.Spacing.sm) {
             Circle()
-                .fill(LinearGradient(colors: conversation.avatarColors, startPoint: .topLeading, endPoint: .bottomTrailing))
+                .fill(LinearGradient(colors: [.gray, .gray.opacity(0.6)], startPoint: .topLeading, endPoint: .bottomTrailing))
                 .frame(width: 52, height: 52)
-                .overlay(Text(conversation.avatarInitials).font(.subheadline).fontWeight(.bold).foregroundStyle(.white))
+                .overlay(Text(avatarInitials(for: conversation.otherUsername)).font(.subheadline).fontWeight(.bold).foregroundStyle(.white))
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(conversation.username).font(.subheadline).fontWeight(.semibold)
-                Text(conversation.lastMessage)
+                Text(conversation.otherUsername).font(.subheadline).fontWeight(.semibold)
+                Text(conversation.lastMessageText ?? "")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
@@ -103,31 +116,52 @@ struct DMView: View {
 
             Spacer()
 
-            Text(conversation.timeAgo)
+            Text(timeAgo(conversation.lastMessageAt))
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
         }
         .padding(.vertical, Theme.Spacing.sm)
     }
+
+    private func avatarInitials(for username: String) -> String {
+        String(username.prefix(2)).uppercased()
+    }
+
+    private func timeAgo(_ date: Date) -> String {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .abbreviated
+        return formatter.localizedString(for: date, relativeTo: Date())
+    }
 }
 
 struct ChatThreadView: View {
-    @Binding var conversation: DMConversation
+    let conversationId: UUID
+    let otherUsername: String
+    let otherAvatarUrl: String?
+
+    @State private var messages: [DBMessage] = []
+    @State private var myUserId: UUID?
     @State private var draft = ""
     @EnvironmentObject private var captureButtonVisibility: CaptureButtonVisibility
     @FocusState private var isDraftFocused: Bool
+
+    private var avatarInitials: String {
+        String(otherUsername.prefix(2)).uppercased()
+    }
+    private var avatarColors: [Color] { [.gray, .gray.opacity(0.6)] }
 
     var body: some View {
         VStack(spacing: 0) {
             ScrollView {
                 VStack(spacing: Theme.Spacing.sm) {
-                    ForEach(conversation.messages) { message in
+                    ForEach(messages) { message in
+                        let fromMe = message.senderId == myUserId
                         HStack(alignment: .bottom, spacing: 8) {
-                            if !message.fromMe {
+                            if !fromMe {
                                 Circle()
-                                    .fill(LinearGradient(colors: conversation.avatarColors, startPoint: .topLeading, endPoint: .bottomTrailing))
+                                    .fill(LinearGradient(colors: avatarColors, startPoint: .topLeading, endPoint: .bottomTrailing))
                                     .frame(width: 26, height: 26)
-                                    .overlay(Text(conversation.avatarInitials).font(.system(size: 9)).fontWeight(.bold).foregroundStyle(.white))
+                                    .overlay(Text(avatarInitials).font(.system(size: 9)).fontWeight(.bold).foregroundStyle(.white))
                             } else {
                                 Spacer(minLength: 40)
                             }
@@ -137,14 +171,14 @@ struct ChatThreadView: View {
                                 .padding(.horizontal, Theme.Spacing.md)
                                 .padding(.vertical, 10)
                                 .background(
-                                    message.fromMe
+                                    fromMe
                                         ? AnyShapeStyle(LinearGradient(colors: [Color.accentColor, Color.accentColor.opacity(0.8)], startPoint: .topLeading, endPoint: .bottomTrailing))
                                         : AnyShapeStyle(Color(.secondarySystemBackground)),
-                                    in: BubbleShape(fromMe: message.fromMe)
+                                    in: BubbleShape(fromMe: fromMe)
                                 )
-                                .foregroundStyle(message.fromMe ? .white : .primary)
+                                .foregroundStyle(fromMe ? .white : .primary)
 
-                            if !message.fromMe { Spacer(minLength: 40) }
+                            if !fromMe { Spacer(minLength: 40) }
                         }
                     }
                 }
@@ -163,7 +197,7 @@ struct ChatThreadView: View {
                     .background(Color(.secondarySystemBackground), in: Capsule())
 
                 Button {
-                    send()
+                    Task { await send() }
                 } label: {
                     Image(systemName: "arrow.up.circle.fill")
                         .font(.system(size: 30))
@@ -178,14 +212,15 @@ struct ChatThreadView: View {
         .toolbar {
             ToolbarItem(placement: .principal) {
                 NavigationLink {
-                    UserProfileView(username: conversation.username, avatarInitials: conversation.avatarInitials, avatarColors: conversation.avatarColors)
+                    UserProfileView(username: otherUsername, avatarInitials: avatarInitials, avatarColors: avatarColors)
                 } label: {
-                    Text(conversation.username)
+                    Text(otherUsername)
                         .font(.headline)
                         .foregroundStyle(.primary)
                 }
             }
         }
+        .task { await load() }
         .onAppear { captureButtonVisibility.isHidden = true }
         .onDisappear {
             captureButtonVisibility.isHidden = false
@@ -193,11 +228,17 @@ struct ChatThreadView: View {
         }
     }
 
-    private func send() {
+    private func load() async {
+        myUserId = SupabaseService.client.auth.currentSession?.user.id
+        messages = (try? await SupabaseService.fetchMessages(conversationId: conversationId)) ?? []
+    }
+
+    private func send() async {
         let text = draft.trimmingCharacters(in: .whitespaces)
         guard !text.isEmpty else { return }
-        conversation.messages.append(ChatMessage(fromMe: true, text: text))
         draft = ""
+        try? await SupabaseService.sendMessage(conversationId: conversationId, text: text)
+        messages = (try? await SupabaseService.fetchMessages(conversationId: conversationId)) ?? []
     }
 }
 
