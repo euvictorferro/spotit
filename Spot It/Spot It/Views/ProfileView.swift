@@ -24,6 +24,7 @@ struct ProfileView: View {
     @State private var username = ""
     @State private var bio = ""
     @State private var avatarImageData: Data?
+    @State private var loadedAvatarUrl: String?
 
     private var avatarInitials: String {
         let parts = displayName.split(separator: " ")
@@ -260,6 +261,15 @@ struct ProfileView: View {
         displayName = profile.displayName ?? profile.username
         username = profile.username
         bio = profile.bio ?? ""
+
+        guard let avatarUrlString = profile.avatarUrl, avatarUrlString != loadedAvatarUrl,
+              let url = URL(string: avatarUrlString) else { return }
+        loadedAvatarUrl = avatarUrlString
+        Task {
+            if let (data, _) = try? await URLSession.shared.data(from: url) {
+                avatarImageData = data
+            }
+        }
     }
 
     private func persistProfileEdits() async {
