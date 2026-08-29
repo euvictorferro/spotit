@@ -3,16 +3,19 @@ import SwiftUI
 struct EventsView: View {
     @State private var events: [DBEvent] = []
     @State private var showCreate = false
+    @State private var loadFailed = false
 
     var body: some View {
         Group {
-            if events.isEmpty {
+            if events.isEmpty && loadFailed {
+                EmptyStateView(icon: "wifi.slash", message: "Não deu pra carregar os eventos agora. Puxe pra atualizar.")
+            } else if events.isEmpty {
                 EmptyStateView(icon: "ticket", message: "Nenhum evento por perto ainda.")
             } else {
                 ScrollView {
                     VStack(spacing: Theme.Spacing.md) {
-                        ForEach(events) { event in
-                            NavigationLink(destination: EventDetailView(event: event)) {
+                        ForEach($events) { $event in
+                            NavigationLink(destination: EventDetailView(event: $event)) {
                                 card(event)
                             }
                             .buttonStyle(.plain)
@@ -44,16 +47,12 @@ struct EventsView: View {
     }
 
     private func load() async {
-        events = (try? await SupabaseService.fetchEvents()) ?? []
-    }
-
-    private func coverGradient(for event: DBEvent) -> [Color] {
-        let palette: [[Color]] = [
-            [.red, .orange], [.purple, .indigo], [.blue, .cyan],
-            [.pink, .purple], [.green, .mint], [.teal, .blue],
-        ]
-        let index = abs(event.id.uuidString.hashValue) % palette.count
-        return palette[index]
+        loadFailed = false
+        do {
+            events = try await SupabaseService.fetchEvents()
+        } catch {
+            loadFailed = true
+        }
     }
 
     private func dateLabel(for date: Date) -> String {
@@ -62,7 +61,7 @@ struct EventsView: View {
 
     private func card(_ event: DBEvent) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            LinearGradient(colors: coverGradient(for: event), startPoint: .top, endPoint: .bottom)
+            LinearGradient(colors: event.coverGradient, startPoint: .top, endPoint: .bottom)
                 .frame(height: 90)
                 .overlay(alignment: .topLeading) {
                     Image(systemName: "ticket.fill")
@@ -97,8 +96,8 @@ struct EventsView: View {
     }
 
     private func toggle(_ event: DBEvent) async {
-        guard let index = events.firstIndex(where: { $0.id == event.id }) else { return }
         guard let nowGoing = try? await SupabaseService.toggleGoing(eventId: event.id) else { return }
+        guard let index = events.firstIndex(where: { $0.id == event.id }) else { return }
         events[index].isGoing = nowGoing
         events[index].attendeeCount += nowGoing ? 1 : -1
     }
@@ -109,7 +108,7 @@ private struct CreateEventSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var name = ""
     @State private var location = ""
-    @State private var eventDate = Date()
+    @State private var eventDate = Calendar.current.date(byAdding: .hour, value: 1, to: Date()) ?? Date()
     @State private var description = ""
     @State private var isCreating = false
     @State private var errorMessage: String?
@@ -119,7 +118,7 @@ private struct CreateEventSheet: View {
             Form {
                 Section("Nome") { TextField("Ex: Cars & Coffee Naples", text: $name) }
                 Section("Local") { TextField("Ex: Naples, FL", text: $location) }
-                Section("Data") { DatePicker("", selection: $eventDate).labelsHidden() }
+                Section("Data") { DatePicker("", selection: $eventDate, in: Date()...).labelsHidden() }
                 Section("Descrição (opcional)") { TextField("Conta mais sobre o evento...", text: $description, axis: .vertical) }
                 if let errorMessage {
                     Text(errorMessage).foregroundStyle(.red)
@@ -132,14 +131,22 @@ private struct CreateEventSheet: View {
                     Button("Cancelar") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Criar") { Task { await create() } }
-                        .disabled(name.isEmpty || location.isEmpty || isCreating)
+                    if isCreating {
+                        ProgressView()
+                    } else {
+                        Button("Criar") { Task { await create() } }
+                            .disabled(name.isEmpty || location.isEmpty)
+                    }
                 }
             }
         }
     }
 
     private func create() async {
+        guard eventDate > Date() else {
+            errorMessage = "A data do evento precisa ser no futuro."
+            return
+        }
         isCreating = true
         defer { isCreating = false }
         do {

@@ -3,7 +3,7 @@ import MapKit
 import EventKit
 
 struct EventDetailView: View {
-    @State var event: DBEvent
+    @Binding var event: DBEvent
     @State private var calendarMessage: String?
 
     private var coordinate: CLLocationCoordinate2D? {
@@ -19,7 +19,7 @@ struct EventDetailView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
-                LinearGradient(colors: [Color(red: 0.05, green: 0.12, blue: 0.2), Color(red: 0.02, green: 0.04, blue: 0.07)], startPoint: .top, endPoint: .bottom)
+                LinearGradient(colors: event.coverGradient, startPoint: .top, endPoint: .bottom)
                     .frame(height: 160)
                     .clipShape(RoundedRectangle(cornerRadius: Theme.cornerRadius))
                     .overlay(alignment: .bottomLeading) {
