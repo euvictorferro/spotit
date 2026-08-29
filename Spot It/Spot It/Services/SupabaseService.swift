@@ -1,5 +1,6 @@
 import Foundation
 import Supabase
+import CoreLocation
 
 enum SupabaseError: LocalizedError {
     case notSignedIn
@@ -680,5 +681,125 @@ struct SupabaseService {
             .update(MarkRead(is_read: true))
             .eq("id", value: id)
             .execute()
+    }
+
+    static func createEvent(name: String, location: String, eventDate: Date, description: String?) async throws {
+        try ensureSignedIn()
+        guard let myId = client.auth.currentSession?.user.id else { throw SupabaseError.notSignedIn }
+
+        var lat: Double?
+        var lng: Double?
+        if let placemark = try? await CLGeocoder().geocodeAddressString(location).first,
+           let coordinate = placemark.location?.coordinate {
+            lat = coordinate.latitude
+            lng = coordinate.longitude
+        }
+
+        struct NewEvent: Encodable {
+            let organizer_id: UUID
+            let name: String
+            let location: String
+            let lat: Double?
+            let lng: Double?
+            let event_date: Date
+            let description: String?
+        }
+        try await client.from("events")
+            .insert(NewEvent(organizer_id: myId, name: name, location: location, lat: lat, lng: lng, event_date: eventDate, description: description))
+            .execute()
+    }
+
+    static func fetchEvents() async throws -> [DBEvent] {
+        try ensureSignedIn()
+        let myId = client.auth.currentSession?.user.id
+
+        struct EventRow: Decodable {
+            let id: UUID
+            let organizer_id: UUID
+            let name: String
+            let location: String
+            let lat: Double?
+            let lng: Double?
+            let event_date: Date
+            let description: String?
+        }
+
+        let rows: [EventRow] = try await client.from("events")
+            .select()
+            .gte("event_date", value: Date())
+            .order("event_date", ascending: true)
+            .execute()
+            .value
+
+        var events: [DBEvent] = []
+        for row in rows {
+            struct ProfileRow: Decodable { let username: String }
+            let organizerUsername = (try? await client.from("profiles")
+                .select("username")
+                .eq("id", value: row.organizer_id)
+                .single()
+                .execute()
+                .value as ProfileRow)?.username ?? "usuário"
+
+            let attendeeCount: Int = (try? await client.from("event_attendees")
+                .select("event_id", head: true, count: .exact)
+                .eq("event_id", value: row.id)
+                .execute()
+                .count) ?? 0
+
+            var isGoing = false
+            if let myId {
+                struct AttendeeRow: Decodable { let user_id: UUID }
+                let mine: [AttendeeRow] = (try? await client.from("event_attendees")
+                    .select("user_id")
+                    .eq("event_id", value: row.id)
+                    .eq("user_id", value: myId)
+                    .limit(1)
+                    .execute()
+                    .value) ?? []
+                isGoing = !mine.isEmpty
+            }
+
+            events.append(DBEvent(
+                id: row.id, organizerId: row.organizer_id, organizerUsername: organizerUsername,
+                name: row.name, location: row.location, lat: row.lat, lng: row.lng,
+                eventDate: row.event_date, description: row.description,
+                attendeeCount: attendeeCount, isGoing: isGoing
+            ))
+        }
+        return events
+    }
+
+    static func toggleGoing(eventId: UUID) async throws -> Bool {
+        try ensureSignedIn()
+        guard let myId = client.auth.currentSession?.user.id else { throw SupabaseError.notSignedIn }
+
+        struct AttendeeRow: Decodable { let user_id: UUID }
+        let existing: [AttendeeRow] = try await client.from("event_attendees")
+            .select("user_id")
+            .eq("event_id", value: eventId)
+            .eq("user_id", value: myId)
+            .limit(1)
+            .execute()
+            .value
+
+        if existing.isEmpty {
+            struct NewAttendee: Encodable { let event_id: UUID; let user_id: UUID }
+            do {
+                try await client.from("event_attendees")
+                    .insert(NewAttendee(event_id: eventId, user_id: myId))
+                    .execute()
+            } catch {
+                if !error.localizedDescription.contains("duplicate key") { throw error }
+            }
+            return true
+        } else {
+            try await client.from("event_attendees")
+                .delete()
+                .eq("event_id", value: eventId)
+                .eq("user_id", value: myId)
+                .execute()
+            return false
+        }
     }
 }
