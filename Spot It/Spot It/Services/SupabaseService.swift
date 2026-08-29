@@ -1,6 +1,14 @@
 import Foundation
 import Supabase
 
+enum SupabaseError: LocalizedError {
+    case notSignedIn
+
+    var errorDescription: String? {
+        "Não autenticado — tenta de novo em alguns segundos."
+    }
+}
+
 struct WalletItem: Decodable, Identifiable {
     let id: UUID
     let modelo: String
@@ -161,7 +169,11 @@ struct SupabaseService {
 
     static func saveWalletItem(car: CarInfo, fotoUrl: String, lat: Double?, lng: Double?) async throws {
         try await ensureSignedIn()
+        guard let userId = client.auth.currentSession?.user.id else {
+            throw SupabaseError.notSignedIn
+        }
         struct NewItem: Encodable {
+            let user_id: UUID
             let modelo: String
             let ano: Int?
             let motor: String?
@@ -193,6 +205,7 @@ struct SupabaseService {
         }
 
         let item = NewItem(
+            user_id: userId,
             modelo: car.modelo ?? "Desconhecido",
             ano: car.ano,
             motor: car.motor,
