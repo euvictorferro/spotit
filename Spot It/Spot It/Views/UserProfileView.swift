@@ -22,19 +22,19 @@ struct UserProfileView: View {
     let username: String
     let avatarInitials: String
     let avatarColors: [Color]
+    let userId: UUID
 
     @State private var tab: UserProfileTab = .fotos
     @State private var isFollowing = false
-    @State private var conversation: DMConversation
+    @State private var openConversationId: UUID?
+    @State private var isStartingConversation = false
+    @State private var errorMessage: String?
 
-    init(username: String, avatarInitials: String, avatarColors: [Color]) {
+    init(username: String, avatarInitials: String, avatarColors: [Color], userId: UUID) {
         self.username = username
         self.avatarInitials = avatarInitials
         self.avatarColors = avatarColors
-        _conversation = State(initialValue: DMConversation(
-            username: username, avatarColors: avatarColors, avatarInitials: avatarInitials,
-            lastMessage: "", timeAgo: "", messages: []
-        ))
+        self.userId = userId
     }
 
     // Sem backend social ainda — perfil de outros usuários fica vazio.
@@ -114,15 +114,38 @@ struct UserProfileView: View {
                 .tint(isFollowing ? Color(.secondarySystemBackground) : Color.accentColor)
                 .foregroundStyle(isFollowing ? Color.primary : Color.white)
 
-                NavigationLink(destination: ChatThreadView(conversation: $conversation)) {
+                Button {
+                    Task { await startConversation() }
+                } label: {
                     Text("Mensagem")
                         .font(.subheadline).fontWeight(.semibold)
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered)
+                .disabled(isStartingConversation)
+            }
+
+            if let errorMessage {
+                Text(errorMessage)
+                    .font(.footnote)
+                    .foregroundStyle(.red)
             }
         }
         .padding(.top, Theme.Spacing.xs)
+        .navigationDestination(item: $openConversationId) { conversationId in
+            ChatThreadView(conversationId: conversationId, otherUsername: username, otherAvatarUrl: nil)
+        }
+    }
+
+    private func startConversation() async {
+        errorMessage = nil
+        isStartingConversation = true
+        defer { isStartingConversation = false }
+        do {
+            openConversationId = try await SupabaseService.startOrFetchConversation(withUserId: userId)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 
     private func statColumn(value: String, label: String) -> some View {
@@ -184,6 +207,6 @@ struct UserProfileView: View {
 
 #Preview {
     NavigationStack {
-        UserProfileView(username: "rk.spotter", avatarInitials: "RK", avatarColors: [.purple, .indigo])
+        UserProfileView(username: "rk.spotter", avatarInitials: "RK", avatarColors: [.purple, .indigo], userId: UUID())
     }
 }

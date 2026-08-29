@@ -23,7 +23,8 @@ struct SearchUsersView: View {
                 } else {
                     List(results) { user in
                         NavigationLink {
-                            UserProfileView(username: user.username, avatarInitials: user.avatarInitials, avatarColors: user.avatarColors)
+                            // ponytail: Busca ainda não tem backend real — sem userId real do usuário encontrado até então.
+                            UserProfileView(username: user.username, avatarInitials: user.avatarInitials, avatarColors: user.avatarColors, userId: UUID())
                         } label: {
                             row(user)
                         }

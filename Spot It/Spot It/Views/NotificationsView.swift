@@ -48,10 +48,12 @@ struct NotificationsView: View {
         }
         .navigationTitle("Notificações")
         .navigationDestination(item: $pushUsername) { username in
+            // ponytail: Notificações ainda não tem backend real — sem userId real até então.
             UserProfileView(
                 username: username,
                 avatarInitials: avatarInitials(for: username),
-                avatarColors: avatarColors(for: username)
+                avatarColors: avatarColors(for: username),
+                userId: UUID()
             )
         }
         .fullScreenCover(item: $detailItem) { item in

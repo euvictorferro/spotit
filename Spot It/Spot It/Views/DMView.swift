@@ -212,7 +212,8 @@ struct ChatThreadView: View {
         .toolbar {
             ToolbarItem(placement: .principal) {
                 NavigationLink {
-                    UserProfileView(username: otherUsername, avatarInitials: avatarInitials, avatarColors: avatarColors)
+                    // ponytail: header do chat ainda não guarda o userId do outro usuário — usa placeholder até a Task 4 (ou nova) propagar o id real aqui.
+                    UserProfileView(username: otherUsername, avatarInitials: avatarInitials, avatarColors: avatarColors, userId: UUID())
                 } label: {
                     Text(otherUsername)
                         .font(.headline)
