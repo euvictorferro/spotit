@@ -3,9 +3,15 @@ import Supabase
 
 enum SupabaseError: LocalizedError {
     case notSignedIn
+    case cannotMessageSelf
 
     var errorDescription: String? {
-        "Não autenticado — tenta de novo em alguns segundos."
+        switch self {
+        case .notSignedIn:
+            return "Não autenticado — tenta de novo em alguns segundos."
+        case .cannotMessageSelf:
+            return "Não é possível iniciar uma conversa consigo mesmo."
+        }
     }
 }
 
@@ -259,17 +265,18 @@ struct SupabaseService {
     static func startOrFetchConversation(withUserId otherId: UUID) async throws -> UUID {
         try ensureSignedIn()
         guard let myId = client.auth.currentSession?.user.id else { throw SupabaseError.notSignedIn }
+        guard otherId != myId else { throw SupabaseError.cannotMessageSelf }
 
         let userA = min(myId, otherId)
         let userB = max(myId, otherId)
 
         struct ConversationId: Decodable { let id: UUID }
 
-        if let existing: ConversationId = try? await client.from("conversations")
+        if let existing: ConversationId = try await client.from("conversations")
             .select("id")
             .eq("user_a", value: userA)
             .eq("user_b", value: userB)
-            .single()
+            .maybeSingle()
             .execute()
             .value {
             return existing.id
@@ -323,18 +330,22 @@ struct SupabaseService {
             else { continue }
 
             struct LastMessageRow: Decodable { let text: String }
-            let lastMessage: LastMessageRow? = try? await client.from("messages")
+            // Conversa é criada (item "Mensagem" no perfil) antes de qualquer
+            // mensagem existir — sem isso, uma conversa vazia (a pessoa
+            // desistiu de mandar algo) aparece pra sempre na inbox dos dois.
+            guard let lastMessage: LastMessageRow = try? await client.from("messages")
                 .select("text")
                 .eq("conversation_id", value: row.id)
                 .order("created_at", ascending: false)
                 .limit(1)
-                .single()
+                .maybeSingle()
                 .execute()
                 .value
+            else { continue }
 
             summaries.append(ConversationSummary(
                 id: row.id, otherUserId: otherId, otherUsername: profile.username,
-                otherAvatarUrl: profile.avatar_url, lastMessageText: lastMessage?.text,
+                otherAvatarUrl: profile.avatar_url, lastMessageText: lastMessage.text,
                 lastMessageAt: row.last_message_at
             ))
         }
@@ -360,14 +371,11 @@ struct SupabaseService {
             let sender_id: UUID
             let text: String
         }
+        // last_message_at é atualizado por trigger (touch_conversation, ver
+        // migration 0007) — não há mais policy de UPDATE em conversations
+        // pro client, então não fazemos esse update na mão aqui.
         try await client.from("messages")
             .insert(NewMessage(conversation_id: conversationId, sender_id: myId, text: text))
-            .execute()
-
-        struct TouchConversation: Encodable { let last_message_at: Date }
-        try await client.from("conversations")
-            .update(TouchConversation(last_message_at: Date()))
-            .eq("id", value: conversationId)
             .execute()
     }
 }
