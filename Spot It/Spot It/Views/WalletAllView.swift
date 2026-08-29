@@ -150,7 +150,7 @@ struct WalletAllView: View {
             )
         }
         .fullScreenCover(item: $detailItem) { item in
-            CarDetailPageView(item: item)
+            CarDetailPageView(item: item, canPublish: true)
         }
         .confirmationDialog(
             "Você tem certeza que quer deletar esses carros?",

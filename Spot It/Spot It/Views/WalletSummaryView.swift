@@ -144,7 +144,7 @@ private struct BestCarsCarousel: View {
         .indexViewStyle(.page(backgroundDisplayMode: .always))
         .frame(height: 320)
         .fullScreenCover(item: $detailItem) { item in
-            CarDetailPageView(item: item)
+            CarDetailPageView(item: item, canPublish: true)
         }
     }
 

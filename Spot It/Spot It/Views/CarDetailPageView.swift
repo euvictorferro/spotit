@@ -8,10 +8,12 @@ import Charts
 /// diagrama de dimensões, e design (interior/exterior).
 struct CarDetailPageView: View {
     let item: WalletItem
+    var canPublish: Bool = false
     @Environment(\.dismiss) private var dismiss
     @State private var valueFeedback: Bool?
     @State private var infoFeedback: Bool?
     @State private var selectedPoint: (month: Int, value: Double)?
+    @State private var showPublishSheet = false
 
     private var brandInfo: CarBrandInfo? { CarBrandInfo.info(for: item.modelo) }
 
@@ -78,9 +80,21 @@ struct CarDetailPageView: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Fechar") { dismiss() }
                 }
+                if canPublish {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button {
+                            showPublishSheet = true
+                        } label: {
+                            Image(systemName: "square.and.arrow.up.on.square")
+                        }
+                    }
+                }
             }
         }
         .preferredColorScheme(.dark)
+        .sheet(isPresented: $showPublishSheet) {
+            PublishToFeedSheet(item: item)
+        }
     }
 
     // MARK: - Hero + título
@@ -503,6 +517,54 @@ private extension String {
     var capitalizedFirst: String {
         guard let first else { return self }
         return first.uppercased() + dropFirst()
+    }
+}
+
+/// Sheet simples de legenda opcional pra publicar um item da Wallet no Feed.
+private struct PublishToFeedSheet: View {
+    let item: WalletItem
+    @Environment(\.dismiss) private var dismiss
+    @State private var caption = ""
+    @State private var isPublishing = false
+    @State private var errorMessage: String?
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Legenda (opcional)") {
+                    TextField("Conta a história desse flagra...", text: $caption, axis: .vertical)
+                }
+                if let errorMessage {
+                    Text(errorMessage).foregroundStyle(.red)
+                }
+            }
+            .navigationTitle("Publicar no Feed")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancelar") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Publicar") { Task { await publish() } }
+                        .disabled(isPublishing)
+                }
+            }
+        }
+    }
+
+    private func publish() async {
+        isPublishing = true
+        defer { isPublishing = false }
+        do {
+            try await SupabaseService.createPost(
+                walletItemId: item.id, modelo: item.modelo, raridade: item.raridade,
+                valorEstimadoUsd: item.valorEstimadoUsd, fotoUrl: item.fotoUrl,
+                caption: caption.isEmpty ? nil : caption
+            )
+            dismiss()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 }
 
