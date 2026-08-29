@@ -1,5 +1,6 @@
 import SwiftUI
 import PhotosUI
+import Auth
 
 private enum ProfileTab {
     case fotos, ranking
@@ -18,6 +19,8 @@ struct ProfileView: View {
     @State private var tab: ProfileTab = .fotos
     @State private var showSettings = false
     @State private var showEditProfile = false
+    @State private var followersCount = 0
+    @State private var followingCount = 0
 
     @EnvironmentObject private var authService: AuthService
     @State private var displayName = ""
@@ -102,9 +105,9 @@ struct ProfileView: View {
             HStack(spacing: Theme.Spacing.lg) {
                 avatarView
 
-                // ponytail: só o stat de posts é real — seguidores/seguindo
-                // voltam quando existir sistema de seguidores no backend.
                 statColumn(value: "\(items.count)", label: "posts")
+                statColumn(value: "\(followersCount)", label: "seguidores")
+                statColumn(value: "\(followingCount)", label: "seguindo")
             }
 
             VStack(alignment: .leading, spacing: 2) {
@@ -223,6 +226,14 @@ struct ProfileView: View {
     private func load() async {
         isLoading = true
         items = (try? await SupabaseService.fetchWalletItems()) ?? []
+
+        if let userId = authService.session?.user.id {
+            if let (followers, following) = try? await SupabaseService.followCounts(userId: userId) {
+                followersCount = followers
+                followingCount = following
+            }
+        }
+
         isLoading = false
     }
 
