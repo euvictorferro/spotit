@@ -555,11 +555,12 @@ private struct PublishToFeedSheet: View {
     private func publish() async {
         isPublishing = true
         defer { isPublishing = false }
+        let trimmedCaption = caption.trimmingCharacters(in: .whitespacesAndNewlines)
         do {
             try await SupabaseService.createPost(
                 walletItemId: item.id, modelo: item.modelo, raridade: item.raridade,
                 valorEstimadoUsd: item.valorEstimadoUsd, fotoUrl: item.fotoUrl,
-                caption: caption.isEmpty ? nil : caption
+                caption: trimmedCaption.isEmpty ? nil : trimmedCaption
             )
             dismiss()
         } catch {

@@ -6,11 +6,14 @@ struct FeedView: View {
     @State private var path = NavigationPath()
 
     @State private var posts: [DBPost] = []
+    @State private var loadFailed = false
 
     var body: some View {
         NavigationStack(path: $path) {
             Group {
-                if posts.isEmpty {
+                if posts.isEmpty && loadFailed {
+                    EmptyStateView(icon: "wifi.slash", message: "Não deu pra carregar o feed agora. Puxe pra atualizar.")
+                } else if posts.isEmpty {
                     EmptyStateView(icon: "photo.on.rectangle", message: "Nenhum post ainda. Siga outros spotters pra ver o feed.")
                 } else {
                     ScrollView {
@@ -41,7 +44,7 @@ struct FeedView: View {
                 }
             }
             .toolbarBackground(.hidden, for: .navigationBar)
-            .task { await load() }
+            .onAppear { Task { await load() } }
             .refreshable { await load() }
         }
         .preferredColorScheme(.dark)
@@ -49,7 +52,12 @@ struct FeedView: View {
     }
 
     private func load() async {
-        posts = (try? await SupabaseService.fetchFeedPosts()) ?? []
+        loadFailed = false
+        do {
+            posts = try await SupabaseService.fetchFeedPosts()
+        } catch {
+            loadFailed = true
+        }
     }
 }
 

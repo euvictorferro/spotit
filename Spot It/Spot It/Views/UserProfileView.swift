@@ -40,11 +40,10 @@ struct UserProfileView: View {
         self.userId = userId
     }
 
-    // Sem backend social ainda — perfil de outros usuários fica vazio.
-    private var posts: [FeedPost] { [] }
+    @State private var posts: [DBPost] = []
 
     private var items: [WalletItem] {
-        posts.map { WalletItem(feedPost: $0) }
+        posts.map { WalletItem(dbPost: $0) }
     }
 
     /// Posição dessa pessoa no ranking global — vira busca real quando o
@@ -85,7 +84,10 @@ struct UserProfileView: View {
                 Text("@\(username)").font(.headline)
             }
         }
-        .task { await loadFollowState() }
+        .task {
+            await loadFollowState()
+            await loadPosts()
+        }
     }
 
     private func loadFollowState() async {
@@ -101,6 +103,11 @@ struct UserProfileView: View {
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    private func loadPosts() async {
+        guard let userId else { return }
+        posts = (try? await SupabaseService.fetchPosts(userId: userId)) ?? []
     }
 
     private var header: some View {
@@ -241,9 +248,18 @@ struct UserProfileView: View {
     private var photosGrid: some View {
         LazyVGrid(columns: columns, spacing: 2) {
             ForEach(posts) { post in
-                LinearGradient(colors: post.photoGradient, startPoint: .top, endPoint: .bottom)
-                    .aspectRatio(1, contentMode: .fill)
-                    .clipped()
+                AsyncImage(url: URL(string: post.fotoUrl)) { phase in
+                    if case .success(let image) = phase {
+                        image.resizable().scaledToFill()
+                    } else {
+                        LinearGradient(
+                            colors: [Theme.rarityColor(post.raridade).opacity(0.6), Theme.rarityColor(post.raridade).opacity(0.15)],
+                            startPoint: .top, endPoint: .bottom
+                        )
+                    }
+                }
+                .aspectRatio(1, contentMode: .fill)
+                .clipped()
             }
         }
     }

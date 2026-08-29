@@ -4,6 +4,7 @@ struct CommentsSheet: View {
     let post: DBPost
     @State private var comments: [DBComment] = []
     @State private var newComment = ""
+    @State private var errorMessage: String?
     @FocusState private var isInputFocused: Bool
 
     var body: some View {
@@ -37,6 +38,14 @@ struct CommentsSheet: View {
                     .fontWeight(.semibold)
                 }
                 .padding(Theme.Spacing.md)
+
+                if let errorMessage {
+                    Text(errorMessage)
+                        .font(.footnote)
+                        .foregroundStyle(.red)
+                        .padding(.horizontal, Theme.Spacing.md)
+                        .padding(.bottom, Theme.Spacing.sm)
+                }
             }
             .navigationTitle("Comentários")
             .navigationBarTitleDisplayMode(.inline)
@@ -84,10 +93,15 @@ struct CommentsSheet: View {
     private func send() {
         let text = newComment.trimmingCharacters(in: .whitespaces)
         guard !text.isEmpty else { return }
-        newComment = ""
+        errorMessage = nil
         Task {
-            try? await SupabaseService.addComment(postId: post.id, text: text)
-            await load()
+            do {
+                try await SupabaseService.addComment(postId: post.id, text: text)
+                newComment = ""
+                await load()
+            } catch {
+                errorMessage = error.localizedDescription
+            }
         }
     }
 }

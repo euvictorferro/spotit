@@ -33,7 +33,7 @@ struct FeedPostCard: View {
                 .padding(.top, Theme.Spacing.xs)
 
             if likeCount > 0 {
-                Text("\(likeCount) curtidas")
+                Text(likeCount == 1 ? "1 curtida" : "\(likeCount) curtidas")
                     .font(.footnote)
             }
 

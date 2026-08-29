@@ -471,36 +471,49 @@ struct SupabaseService {
 
     static func fetchFeedPosts() async throws -> [DBPost] {
         try ensureSignedIn()
-        let myId = client.auth.currentSession?.user.id
-
-        struct PostRow: Decodable {
-            let id: UUID
-            let user_id: UUID
-            let modelo: String
-            let raridade: Int
-            let valor_estimado_usd: Double
-            let foto_url: String
-            let caption: String?
-            let created_at: Date
-        }
-
         let rows: [PostRow] = try await client.from("posts")
             .select()
             .order("created_at", ascending: false)
             .limit(50)
             .execute()
             .value
+        return try await resolvePosts(rows)
+    }
+
+    static func fetchPosts(userId: UUID) async throws -> [DBPost] {
+        try ensureSignedIn()
+        let rows: [PostRow] = try await client.from("posts")
+            .select()
+            .eq("user_id", value: userId)
+            .order("created_at", ascending: false)
+            .execute()
+            .value
+        return try await resolvePosts(rows)
+    }
+
+    private struct PostRow: Decodable {
+        let id: UUID
+        let user_id: UUID
+        let modelo: String
+        let raridade: Int
+        let valor_estimado_usd: Double
+        let foto_url: String
+        let caption: String?
+        let created_at: Date
+    }
+
+    private static func resolvePosts(_ rows: [PostRow]) async throws -> [DBPost] {
+        let myId = client.auth.currentSession?.user.id
 
         var posts: [DBPost] = []
         for row in rows {
             struct ProfileRow: Decodable { let username: String; let avatar_url: String? }
-            guard let profile: ProfileRow = try? await client.from("profiles")
+            let profile: ProfileRow = (try? await client.from("profiles")
                 .select("username, avatar_url")
                 .eq("id", value: row.user_id)
                 .single()
                 .execute()
-                .value
-            else { continue }
+                .value) ?? ProfileRow(username: "usuário", avatar_url: nil)
 
             let likeCount: Int = (try? await client.from("likes")
                 .select("post_id", head: true, count: .exact)
@@ -552,9 +565,14 @@ struct SupabaseService {
 
         if existing.isEmpty {
             struct NewLike: Encodable { let post_id: UUID; let user_id: UUID }
-            try await client.from("likes")
-                .insert(NewLike(post_id: postId, user_id: myId))
-                .execute()
+            do {
+                try await client.from("likes")
+                    .insert(NewLike(post_id: postId, user_id: myId))
+                    .execute()
+            } catch {
+                // Double-tap gera PK duplicada — já está curtido, trata como sucesso.
+                if !error.localizedDescription.contains("duplicate key") { throw error }
+            }
             return true
         } else {
             try await client.from("likes")
@@ -585,13 +603,12 @@ struct SupabaseService {
         var comments: [DBComment] = []
         for row in rows {
             struct ProfileRow: Decodable { let username: String }
-            guard let profile: ProfileRow = try? await client.from("profiles")
+            let profile: ProfileRow = (try? await client.from("profiles")
                 .select("username")
                 .eq("id", value: row.user_id)
                 .single()
                 .execute()
-                .value
-            else { continue }
+                .value) ?? ProfileRow(username: "usuário")
             comments.append(DBComment(id: row.id, postId: row.post_id, userId: row.user_id, username: profile.username, text: row.text, createdAt: row.created_at))
         }
         return comments
