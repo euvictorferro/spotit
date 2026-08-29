@@ -26,6 +26,9 @@ struct RecognizeService {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONEncoder().encode(["images": images])
+        // Vários ângulos + resposta longa podem passar do timeout padrão de
+        // 60s do URLSession — a função no servidor já tem até 60s (vercel.json).
+        request.timeoutInterval = 90
 
         let (data, response) = try await URLSession.shared.data(for: request)
 
