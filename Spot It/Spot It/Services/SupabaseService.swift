@@ -393,4 +393,55 @@ struct SupabaseService {
             .value
         return rows.map { SearchableUser(id: $0.id, username: $0.username) }
     }
+
+    static func follow(userId: UUID) async throws {
+        try ensureSignedIn()
+        guard let myId = client.auth.currentSession?.user.id else { throw SupabaseError.notSignedIn }
+        struct NewFollow: Encodable {
+            let follower_id: UUID
+            let following_id: UUID
+        }
+        try await client.from("follows")
+            .insert(NewFollow(follower_id: myId, following_id: userId))
+            .execute()
+    }
+
+    static func unfollow(userId: UUID) async throws {
+        try ensureSignedIn()
+        guard let myId = client.auth.currentSession?.user.id else { throw SupabaseError.notSignedIn }
+        try await client.from("follows")
+            .delete()
+            .eq("follower_id", value: myId)
+            .eq("following_id", value: userId)
+            .execute()
+    }
+
+    static func isFollowing(userId: UUID) async throws -> Bool {
+        try ensureSignedIn()
+        guard let myId = client.auth.currentSession?.user.id else { throw SupabaseError.notSignedIn }
+        struct FollowRow: Decodable { let follower_id: UUID }
+        let rows: [FollowRow] = try await client.from("follows")
+            .select("follower_id")
+            .eq("follower_id", value: myId)
+            .eq("following_id", value: userId)
+            .limit(1)
+            .execute()
+            .value
+        return !rows.isEmpty
+    }
+
+    /// Usa `count: .exact, head: true` pra pegar a contagem direto do Postgrest
+    /// sem baixar as linhas — mais eficiente que buscar tudo e contar no cliente.
+    static func followCounts(userId: UUID) async throws -> (followers: Int, following: Int) {
+        try ensureSignedIn()
+        let followersResponse = try await client.from("follows")
+            .select("follower_id", head: true, count: .exact)
+            .eq("following_id", value: userId)
+            .execute()
+        let followingResponse = try await client.from("follows")
+            .select("following_id", head: true, count: .exact)
+            .eq("follower_id", value: userId)
+            .execute()
+        return (followersResponse.count ?? 0, followingResponse.count ?? 0)
+    }
 }
