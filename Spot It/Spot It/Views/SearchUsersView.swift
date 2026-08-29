@@ -50,8 +50,11 @@ struct SearchUsersView: View {
             path = NavigationPath()
             isSearchFocused = false
         }
-        .onChange(of: search) { _, newValue in
-            Task { await search(query: newValue) }
+        // .task(id:) cancela a busca anterior sozinho quando `search` muda de
+        // novo antes dela terminar — evita resposta velha sobrescrever uma
+        // busca mais recente (condição de corrida ao digitar rápido).
+        .task(id: search) {
+            await search(query: search)
         }
     }
 
