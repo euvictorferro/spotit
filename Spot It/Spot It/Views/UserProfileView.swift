@@ -37,21 +37,16 @@ struct UserProfileView: View {
         ))
     }
 
-    private var posts: [FeedPost] {
-        FeedPost.sample.filter { $0.username == username }
-    }
+    // Sem backend social ainda — perfil de outros usuários fica vazio.
+    private var posts: [FeedPost] { [] }
 
     private var items: [WalletItem] {
         posts.map { WalletItem(feedPost: $0) }
     }
 
-    /// Posição dessa pessoa no ranking global — só aparece se ela estiver
-    /// na tabela (RankingEntry.sample). Vira busca real quando o ranking
-    /// for calculado a partir de dados do backend.
-    private var rankingPosition: Int? {
-        let sorted = RankingEntry.sample.sorted { $0.walletValueUsd > $1.walletValueUsd }
-        return sorted.firstIndex { $0.username == username }.map { $0 + 1 }
-    }
+    /// Posição dessa pessoa no ranking global — vira busca real quando o
+    /// ranking for calculado a partir de dados do backend.
+    private var rankingPosition: Int? { nil }
 
     private let columns = [GridItem(.flexible(), spacing: 2), GridItem(.flexible(), spacing: 2), GridItem(.flexible(), spacing: 2)]
 

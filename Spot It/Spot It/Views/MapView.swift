@@ -15,9 +15,9 @@ struct MapView: View {
     )
     @State private var detailItem: WalletItem?
 
-    private var spots: [CarSpot] {
-        scope == .wallet ? CarSpot.sample.filter(\.isMine) : CarSpot.sample
-    }
+    // Sem localização real salva por carro ainda (a Wallet não coleta
+    // lat/lng no momento da captura) — mapa vazio até isso existir.
+    private var spots: [CarSpot] { [] }
 
     var body: some View {
         Map(position: $position) {

@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct NotificationsView: View {
-    @State private var notifications = AppNotification.sample
+    @State private var notifications: [AppNotification] = []
     @State private var pushUsername: String?
     @State private var detailItem: WalletItem?
 
@@ -14,29 +14,35 @@ struct NotificationsView: View {
         notifications.filter { $0.section == section }
     }
 
-    /// Pessoas que já te seguem mas você ainda não segue de volta — sem
-    /// grafo social real ainda, então é uma amostra de SearchableUser.
-    /// Vira uma query de verdade ("followers not followed back") quando
-    /// tiver backend social.
-    private let suggestions = Array(SearchableUser.sample.prefix(3))
+    /// Pessoas que já te seguem mas você ainda não segue de volta — some até
+    /// ter grafo social real ("followers not followed back").
+    private let suggestions: [SearchableUser] = []
 
     var body: some View {
-        List {
-            ForEach(sections, id: \.self) { section in
-                Section(section) {
-                    ForEach(notifications(in: section)) { notification in
-                        row(notification)
-                            .contentShape(Rectangle())
-                            .onTapGesture { open(notification) }
+        Group {
+            if notifications.isEmpty && suggestions.isEmpty {
+                EmptyStateView(icon: "bell", message: "Nenhuma notificação ainda.")
+            } else {
+                List {
+                    ForEach(sections, id: \.self) { section in
+                        Section(section) {
+                            ForEach(notifications(in: section)) { notification in
+                                row(notification)
+                                    .contentShape(Rectangle())
+                                    .onTapGesture { open(notification) }
+                            }
+                        }
                     }
-                }
-            }
 
-            Section("Sugestões para seguir de volta") {
-                ForEach(suggestions) { user in
-                    suggestionRow(user)
-                        .contentShape(Rectangle())
-                        .onTapGesture { pushUsername = user.username }
+                    if !suggestions.isEmpty {
+                        Section("Sugestões para seguir de volta") {
+                            ForEach(suggestions) { user in
+                                suggestionRow(user)
+                                    .contentShape(Rectangle())
+                                    .onTapGesture { pushUsername = user.username }
+                            }
+                        }
+                    }
                 }
             }
         }

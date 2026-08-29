@@ -10,26 +10,28 @@ struct SearchUsersView: View {
     // perfil de alguém e trocar de aba deixava a busca "presa" lá.
     @State private var path = NavigationPath()
 
-    private var results: [SearchableUser] {
-        guard !search.isEmpty else { return SearchableUser.sample }
-        return SearchableUser.sample.filter { $0.username.localizedCaseInsensitiveContains(search) }
-    }
+    // Sem backend de usuários/social ainda — sem resultados até ter busca real.
+    private var results: [SearchableUser] { [] }
 
     var body: some View {
         NavigationStack(path: $path) {
             VStack(spacing: Theme.Spacing.md) {
                 searchField
 
-                List(results) { user in
-                    NavigationLink {
-                        UserProfileView(username: user.username, avatarInitials: user.avatarInitials, avatarColors: user.avatarColors)
-                    } label: {
-                        row(user)
+                if results.isEmpty {
+                    EmptyStateView(icon: "person.crop.circle.badge.questionmark", message: search.isEmpty ? "Busca de usuários ainda não disponível." : "Ninguém encontrado.")
+                } else {
+                    List(results) { user in
+                        NavigationLink {
+                            UserProfileView(username: user.username, avatarInitials: user.avatarInitials, avatarColors: user.avatarColors)
+                        } label: {
+                            row(user)
+                        }
+                        .listRowInsets(EdgeInsets())
+                        .listRowSeparator(.hidden)
                     }
-                    .listRowInsets(EdgeInsets())
-                    .listRowSeparator(.hidden)
+                    .listStyle(.plain)
                 }
-                .listStyle(.plain)
             }
             .padding(.horizontal, Theme.Spacing.md)
             .toolbar {

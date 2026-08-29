@@ -2,18 +2,26 @@ import SwiftUI
 
 struct EventsView: View {
     @State private var going: Set<UUID> = []
+    // Sem backend de eventos ainda — lista vazia até ter eventos reais.
+    private let events: [CarEvent] = []
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: Theme.Spacing.md) {
-                ForEach(CarEvent.sample) { event in
-                    NavigationLink(destination: EventDetailView(event: event, isGoing: binding(for: event.id))) {
-                        card(event)
+        Group {
+            if events.isEmpty {
+                EmptyStateView(icon: "ticket", message: "Nenhum evento por perto ainda.")
+            } else {
+                ScrollView {
+                    VStack(spacing: Theme.Spacing.md) {
+                        ForEach(events) { event in
+                            NavigationLink(destination: EventDetailView(event: event, isGoing: binding(for: event.id))) {
+                                card(event)
+                            }
+                            .buttonStyle(.plain)
+                        }
                     }
-                    .buttonStyle(.plain)
+                    .padding(Theme.Spacing.md)
                 }
             }
-            .padding(Theme.Spacing.md)
         }
         .background(AppGradientBackground())
         .navigationTitle("Eventos")

@@ -5,15 +5,24 @@ struct FeedView: View {
     // pro perfil de alguém e trocar de aba deixava o Feed "preso" lá.
     @State private var path = NavigationPath()
 
+    // Sem backend social ainda — feed vazio até ter posts reais.
+    private let posts: [FeedPost] = []
+
     var body: some View {
         NavigationStack(path: $path) {
-            ScrollView {
-                VStack(spacing: Theme.Spacing.lg) {
-                    ForEach(FeedPost.sample) { post in
-                        FeedPostCard(post: post)
+            Group {
+                if posts.isEmpty {
+                    EmptyStateView(icon: "photo.on.rectangle", message: "Nenhum post ainda. Siga outros spotters pra ver o feed.")
+                } else {
+                    ScrollView {
+                        VStack(spacing: Theme.Spacing.lg) {
+                            ForEach(posts) { post in
+                                FeedPostCard(post: post)
+                            }
+                        }
+                        .padding(Theme.Spacing.md)
                     }
                 }
-                .padding(Theme.Spacing.md)
             }
             .background(AppGradientBackground())
             .toolbar {

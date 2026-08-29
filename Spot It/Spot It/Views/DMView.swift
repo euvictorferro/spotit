@@ -8,7 +8,8 @@ private enum DMFilter: String, CaseIterable {
 }
 
 struct DMView: View {
-    @State private var conversations = DMConversation.sample
+    // Sem backend de mensagens ainda — inbox vazia até ter DMs reais.
+    @State private var conversations: [DMConversation] = []
     @State private var search = ""
     @State private var filter: DMFilter = .all
     @FocusState private var isSearchFocused: Bool
@@ -19,19 +20,23 @@ struct DMView: View {
     var body: some View {
         NavigationStack(path: $path) {
             VStack(spacing: Theme.Spacing.md) {
-                searchField
-                filterChips
+                if conversations.isEmpty {
+                    EmptyStateView(icon: "message", message: "Nenhuma mensagem ainda. Suas conversas aparecem aqui.")
+                } else {
+                    searchField
+                    filterChips
 
-                List {
-                    ForEach($conversations.filter { $0.wrappedValue.username.localizedCaseInsensitiveContains(search) || search.isEmpty }) { $conversation in
-                        NavigationLink(destination: ChatThreadView(conversation: $conversation)) {
-                            row(conversation)
+                    List {
+                        ForEach($conversations.filter { $0.wrappedValue.username.localizedCaseInsensitiveContains(search) || search.isEmpty }) { $conversation in
+                            NavigationLink(destination: ChatThreadView(conversation: $conversation)) {
+                                row(conversation)
+                            }
+                            .listRowInsets(EdgeInsets())
+                            .listRowSeparator(.hidden)
                         }
-                        .listRowInsets(EdgeInsets())
-                        .listRowSeparator(.hidden)
                     }
+                    .listStyle(.plain)
                 }
-                .listStyle(.plain)
             }
             .padding(.horizontal, Theme.Spacing.md)
             .toolbar {
