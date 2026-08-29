@@ -20,7 +20,7 @@ struct ContentView: View {
                     ProgressView()
                 }
             } else if authService.session == nil {
-                AuthView()
+                WelcomeView()
             } else if authService.profile == nil {
                 OnboardingView()
             } else {
