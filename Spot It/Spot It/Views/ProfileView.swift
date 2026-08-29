@@ -93,10 +93,11 @@ struct ProfileView: View {
             .sheet(isPresented: $showSettings) {
                 SettingsSheet()
             }
-            .sheet(isPresented: $showEditProfile, onDismiss: {
-                Task { await persistProfileEdits() }
-            }) {
-                EditProfileSheet(displayName: $displayName, username: $username, bio: $bio, avatarImageData: $avatarImageData)
+            .sheet(isPresented: $showEditProfile) {
+                EditProfileSheet(
+                    displayName: $displayName, username: $username, bio: $bio, avatarImageData: $avatarImageData,
+                    onSave: { Task { await persistProfileEdits() } }
+                )
             }
         }
         .preferredColorScheme(.dark)
@@ -251,8 +252,7 @@ struct ProfileView: View {
 
     private func load() async {
         isLoading = true
-        let fetched = (try? await SupabaseService.fetchWalletItems()) ?? []
-        items = fetched.isEmpty ? WalletItem.sample : fetched
+        items = (try? await SupabaseService.fetchWalletItems()) ?? []
         isLoading = false
     }
 
@@ -352,6 +352,7 @@ private struct EditProfileSheet: View {
     @Binding var username: String
     @Binding var bio: String
     @Binding var avatarImageData: Data?
+    let onSave: () -> Void
 
     @Environment(\.dismiss) private var dismiss
     @State private var draftName: String
@@ -360,11 +361,12 @@ private struct EditProfileSheet: View {
     @State private var draftAvatarData: Data?
     @State private var pickerItem: PhotosPickerItem?
 
-    init(displayName: Binding<String>, username: Binding<String>, bio: Binding<String>, avatarImageData: Binding<Data?>) {
+    init(displayName: Binding<String>, username: Binding<String>, bio: Binding<String>, avatarImageData: Binding<Data?>, onSave: @escaping () -> Void) {
         _displayName = displayName
         _username = username
         _bio = bio
         _avatarImageData = avatarImageData
+        self.onSave = onSave
         _draftName = State(initialValue: displayName.wrappedValue)
         _draftUsername = State(initialValue: username.wrappedValue)
         _draftBio = State(initialValue: bio.wrappedValue)
@@ -432,6 +434,7 @@ private struct EditProfileSheet: View {
         bio = draftBio
         avatarImageData = draftAvatarData
         dismiss()
+        onSave()
     }
 }
 

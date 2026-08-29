@@ -78,6 +78,13 @@ struct OnboardingView: View {
                 .padding(Theme.Spacing.lg)
             }
             .background(AppGradientBackground())
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Sair", role: .destructive) {
+                        Task { try? await authService.signOut() }
+                    }
+                }
+            }
         }
     }
 

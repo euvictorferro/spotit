@@ -14,7 +14,12 @@ struct ContentView: View {
 
     var body: some View {
         Group {
-            if authService.session == nil {
+            if !authService.isReady {
+                ZStack {
+                    AppGradientBackground()
+                    ProgressView()
+                }
+            } else if authService.session == nil {
                 AuthView()
             } else if authService.profile == nil {
                 OnboardingView()
