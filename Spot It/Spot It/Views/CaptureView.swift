@@ -149,9 +149,17 @@ struct CaptureView: View {
         isLoading = true
         errorMessage = nil
         do {
-            carInfo = try await RecognizeService.recognize(imagesData: datas)
+            let info = try await RecognizeService.recognize(imagesData: datas)
+            if info.reconhecido {
+                carInfo = info
+            } else {
+                errorMessage = "A IA não conseguiu identificar esse carro. Tenta de novo."
+            }
         } catch {
-            errorMessage = "Não foi possível identificar o carro. Tenta de novo."
+            // Mostra o erro de verdade (rede, timeout, payload grande demais
+            // etc.) em vez de sempre "não identificado" — sem isso não dá
+            // pra saber se o problema é reconhecimento ou conexão.
+            errorMessage = "Erro: \(error.localizedDescription)"
         }
         isLoading = false
     }
