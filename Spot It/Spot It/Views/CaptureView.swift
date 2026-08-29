@@ -144,7 +144,7 @@ struct CaptureView: View {
 
     private func startIdentifying() async {
         isIdentifying = true
-        let datas = capturedImages.compactMap { $0.resizedForUpload().jpegData(compressionQuality: 0.6) }
+        let datas = capturedImages.compactMap { $0.resizedForUpload().jpegDataCapped() }
         guard !datas.isEmpty else { return }
         isLoading = true
         errorMessage = nil
@@ -265,6 +265,19 @@ extension UIImage {
         let newSize = CGSize(width: size.width * scale, height: size.height * scale)
         let renderer = UIGraphicsImageRenderer(size: newSize)
         return renderer.image { _ in draw(in: CGRect(origin: .zero, size: newSize)) }
+    }
+
+    /// Comprime até caber num teto de bytes — com até 5 fotos na mesma
+    /// requisição, a Vercel rejeita o payload inteiro (HTTP 413) se cada
+    /// imagem não ficar pequena o bastante, mesmo já redimensionada.
+    func jpegDataCapped(maxBytes: Int = 350_000) -> Data? {
+        var quality: CGFloat = 0.6
+        var data = jpegData(compressionQuality: quality)
+        while let current = data, current.count > maxBytes, quality > 0.15 {
+            quality -= 0.1
+            data = jpegData(compressionQuality: quality)
+        }
+        return data
     }
 }
 
