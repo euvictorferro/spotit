@@ -4,19 +4,19 @@ import AVFoundation
 import PhotosUI
 import Combine
 
-/// Fluxo de captura: abre a câmera custom direto (sem tela intermediária),
-/// tira a foto, mostra ela com uma animação de "escaneando" enquanto a IA
-/// identifica o carro, e então abre o resultado.
+/// Fluxo de captura: câmera fica aberta o tempo todo. Cada foto tirada
+/// encolhe pra um slot numa grade de até 5 (frente/trás/lateral/interior/
+/// detalhe ajudam bastante em carros raros), sem sair da câmera — só quando
+/// o usuário aperta "Identificar" é que manda pra IA.
 struct CaptureView: View {
+    static let maxPhotos = 5
+
     @Environment(\.dismiss) private var dismiss
-    @State private var capturedImage: UIImage?
-    /// Todas as fotos já tiradas nesta tentativa — normalmente 1; ganha uma
-    /// 2ª quando o reconhecimento falha e o usuário manda outro ângulo.
     @State private var capturedImages: [UIImage] = []
+    @State private var isIdentifying = false
     @State private var carInfo: CarInfo?
     @State private var isLoading = false
     @State private var errorMessage: String?
-    @State private var isRetryingAngle = false
     #if DEBUG
     @State private var debugPickerItem: PhotosPickerItem?
     #endif
@@ -25,33 +25,47 @@ struct CaptureView: View {
         ZStack {
             Color.black.ignoresSafeArea()
 
-            if let lastImage = capturedImages.last, !isRetryingAngle {
-                scanningView(lastImage)
+            if isIdentifying, let lastImage = capturedImages.last {
+                identifyingView(lastImage)
             } else {
-                CameraPicker(image: $capturedImage, onCancel: { dismiss() })
-                    .ignoresSafeArea()
+                cameraView
 
                 #if DEBUG
                 debugGalleryButton
                 #endif
             }
         }
-        .onChange(of: capturedImage) { _, newImage in
-            guard let newImage else { return }
-            capturedImages.append(newImage)
-            isRetryingAngle = false
-            Task { await recognize() }
-        }
         .sheet(item: $carInfo, onDismiss: retake) { info in
-            ResultView(carInfo: info, image: capturedImage, onFinish: { dismiss() })
+            ResultView(carInfo: info, image: capturedImages.first, onFinish: { dismiss() })
         }
         .preferredColorScheme(.dark)
     }
 
+    private var cameraView: some View {
+        let onIdentify: (() -> Void)? = capturedImages.isEmpty ? nil : { Task { await startIdentifying() } }
+        let onReset: (() -> Void)? = capturedImages.isEmpty ? nil : { retake() }
+        return CameraPicker(
+            onCapture: appendCapturedImage,
+            onCancel: { dismiss() },
+            thumbnails: capturedImages,
+            maxPhotos: Self.maxPhotos,
+            onIdentify: onIdentify,
+            onReset: onReset
+        )
+        .ignoresSafeArea()
+    }
+
+    private func appendCapturedImage(_ image: UIImage) {
+        guard capturedImages.count < Self.maxPhotos else { return }
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+            capturedImages.append(image)
+        }
+    }
+
     #if DEBUG
     /// Só em build de debug — Simulador não tem câmera, isso permite testar
-    /// a animação de scanning com uma foto qualquer da galeria. Some no
-    /// build de release: usuário final não tem upload, só captura ao vivo.
+    /// o fluxo com uma foto qualquer da galeria. Some no build de release:
+    /// usuário final não tem upload, só captura ao vivo.
     private var debugGalleryButton: some View {
         VStack {
             Spacer()
@@ -66,19 +80,22 @@ struct CaptureView: View {
                 Spacer()
             }
             .padding(.horizontal, Theme.Spacing.md)
-            .padding(.bottom, 130)
+            .padding(.bottom, 210)
         }
         .onChange(of: debugPickerItem) { _, newItem in
             Task {
                 guard let data = try? await newItem?.loadTransferable(type: Data.self),
                       let image = UIImage(data: data) else { return }
-                capturedImage = image
+                appendCapturedImage(image)
             }
         }
     }
     #endif
 
-    private func scanningView(_ image: UIImage) -> some View {
+    /// Tela cheia mostrada só depois de apertar "Identificar" — a última
+    /// foto de fundo com a animação de scan, ou o erro com opção de voltar
+    /// pra câmera (mantendo as fotos já tiradas) ou recomeçar do zero.
+    private func identifyingView(_ image: UIImage) -> some View {
         ZStack {
             Image(uiImage: image)
                 .resizable()
@@ -98,8 +115,8 @@ struct CaptureView: View {
                             .foregroundStyle(.white)
                             .multilineTextAlignment(.center)
                         HStack {
-                            if capturedImages.count == 1 {
-                                Button("Tentar outro ângulo") { retryAngle() }
+                            if capturedImages.count < Self.maxPhotos {
+                                Button("+ Adicionar ângulo") { isIdentifying = false }
                                     .buttonStyle(.borderedProminent)
                             }
                             Button("Recomeçar") { retake() }
@@ -119,22 +136,14 @@ struct CaptureView: View {
     }
 
     private func retake() {
-        capturedImage = nil
         capturedImages = []
         carInfo = nil
         errorMessage = nil
-        isRetryingAngle = false
+        isIdentifying = false
     }
 
-    /// Não descarta a 1ª foto — reabre a câmera pra capturar um 2º ângulo e
-    /// reenviar as duas juntas, sem reiniciar o fluxo do zero.
-    private func retryAngle() {
-        capturedImage = nil
-        errorMessage = nil
-        isRetryingAngle = true
-    }
-
-    private func recognize() async {
+    private func startIdentifying() async {
+        isIdentifying = true
         let datas = capturedImages.compactMap { $0.resizedForUpload().jpegData(compressionQuality: 0.6) }
         guard !datas.isEmpty else { return }
         isLoading = true
@@ -339,12 +348,17 @@ private struct CameraPreviewView: UIViewRepresentable {
     }
 }
 
-/// Preview de câmera em tela cheia + moldura com cantos, flash, X pra sair
-/// e o obturador — sem ícone de galeria de propósito, o app não aceita
-/// upload de fotos do usuário final, só captura ao vivo.
+/// Preview de câmera em tela cheia + moldura com cantos, flash, X pra sair,
+/// grade de miniaturas das fotos já tiradas e o obturador — sem ícone de
+/// galeria de propósito, o app não aceita upload do usuário final, só
+/// captura ao vivo.
 struct CameraPicker: View {
-    @Binding var image: UIImage?
+    var onCapture: (UIImage) -> Void
     var onCancel: () -> Void
+    var thumbnails: [UIImage]
+    var maxPhotos: Int
+    var onIdentify: (() -> Void)?
+    var onReset: (() -> Void)?
 
     @StateObject private var camera = CameraModel()
     @State private var isFlashOn = false
@@ -363,12 +377,16 @@ struct CameraPicker: View {
                     isFlashOn = on
                     camera.setFlash(on)
                 },
-                onDismiss: onCancel
+                onDismiss: onCancel,
+                thumbnails: thumbnails,
+                maxPhotos: maxPhotos,
+                onIdentify: onIdentify,
+                onReset: onReset
             )
             .zIndex(1)
         }
         .onAppear {
-            camera.onCapture = { image = $0 }
+            camera.onCapture = onCapture
             camera.configureIfNeeded()
             camera.start()
         }
@@ -376,12 +394,17 @@ struct CameraPicker: View {
     }
 }
 
-/// Moldura com cantos, botão de flash, X pra sair e o obturador — visual de
-/// referência (câmera dedicada de identificação, sem controles extras).
+/// Moldura com cantos, botão de flash, X pra sair, grade de miniaturas e o
+/// obturador — visual de referência (câmera dedicada de identificação, sem
+/// controles extras).
 private struct CameraOverlayView: View {
     let onCapture: () -> Void
     let onToggleFlash: (Bool) -> Void
     let onDismiss: () -> Void
+    let thumbnails: [UIImage]
+    let maxPhotos: Int
+    let onIdentify: (() -> Void)?
+    let onReset: (() -> Void)?
     @State private var isFlashOn = false
 
     var body: some View {
@@ -408,15 +431,65 @@ private struct CameraOverlayView: View {
 
                 Spacer()
 
-                Button(action: onCapture) {
-                    Circle()
-                        .stroke(.white, lineWidth: 4)
-                        .frame(width: 74, height: 74)
-                        .overlay(Circle().fill(.white).frame(width: 62, height: 62))
+                thumbnailGrid
+                    .padding(.bottom, Theme.Spacing.md)
+
+                HStack {
+                    Group {
+                        if let onReset {
+                            Button("Recomeçar", action: onReset)
+                                .buttonStyle(.plain)
+                                .foregroundStyle(.white)
+                        }
+                    }
+                    .frame(width: 90, alignment: .leading)
+
+                    Spacer()
+
+                    Button(action: onCapture) {
+                        Circle()
+                            .stroke(.white, lineWidth: 4)
+                            .frame(width: 74, height: 74)
+                            .overlay(Circle().fill(.white).frame(width: 62, height: 62))
+                    }
+                    .buttonStyle(.plain)
+                    .contentShape(Circle())
+
+                    Spacer()
+
+                    Group {
+                        if let onIdentify {
+                            Button("Identificar", action: onIdentify)
+                                .buttonStyle(.borderedProminent)
+                                .tint(.accentColor)
+                        }
+                    }
+                    .frame(width: 90, alignment: .trailing)
                 }
-                .buttonStyle(.plain)
-                .contentShape(Circle())
+                .padding(.horizontal, Theme.Spacing.md)
                 .padding(.bottom, 40)
+            }
+        }
+    }
+
+    /// Grade de até 5 slots — preenchidos mostram a miniatura, vazios ficam
+    /// como um contorno tracejado indicando quantas fotos ainda cabem.
+    private var thumbnailGrid: some View {
+        HStack(spacing: Theme.Spacing.xs) {
+            ForEach(0..<maxPhotos, id: \.self) { index in
+                if index < thumbnails.count {
+                    Image(uiImage: thumbnails[index])
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 44, height: 44)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                        .overlay(RoundedRectangle(cornerRadius: 8).stroke(.white.opacity(0.6), lineWidth: 1))
+                        .transition(.scale.combined(with: .opacity))
+                } else {
+                    RoundedRectangle(cornerRadius: 8)
+                        .strokeBorder(.white.opacity(0.3), style: StrokeStyle(lineWidth: 1, dash: [4]))
+                        .frame(width: 44, height: 44)
+                }
             }
         }
     }
