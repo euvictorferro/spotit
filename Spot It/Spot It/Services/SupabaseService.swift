@@ -255,4 +255,119 @@ struct SupabaseService {
             .in("id", values: ids.map(\.uuidString))
             .execute()
     }
+
+    static func startOrFetchConversation(withUserId otherId: UUID) async throws -> UUID {
+        try ensureSignedIn()
+        guard let myId = client.auth.currentSession?.user.id else { throw SupabaseError.notSignedIn }
+
+        let userA = min(myId, otherId)
+        let userB = max(myId, otherId)
+
+        struct ConversationId: Decodable { let id: UUID }
+
+        if let existing: ConversationId = try? await client.from("conversations")
+            .select("id")
+            .eq("user_a", value: userA)
+            .eq("user_b", value: userB)
+            .single()
+            .execute()
+            .value {
+            return existing.id
+        }
+
+        struct NewConversation: Encodable {
+            let user_a: UUID
+            let user_b: UUID
+        }
+        let inserted: ConversationId = try await client.from("conversations")
+            .insert(NewConversation(user_a: userA, user_b: userB))
+            .select("id")
+            .single()
+            .execute()
+            .value
+        return inserted.id
+    }
+
+    static func fetchConversations() async throws -> [ConversationSummary] {
+        try ensureSignedIn()
+        guard let myId = client.auth.currentSession?.user.id else { throw SupabaseError.notSignedIn }
+
+        struct ConversationRow: Decodable {
+            let id: UUID
+            let user_a: UUID
+            let user_b: UUID
+            let last_message_at: Date
+        }
+
+        let rows: [ConversationRow] = try await client.from("conversations")
+            .select()
+            .or("user_a.eq.\(myId),user_b.eq.\(myId)")
+            .order("last_message_at", ascending: false)
+            .execute()
+            .value
+
+        var summaries: [ConversationSummary] = []
+        for row in rows {
+            let otherId = row.user_a == myId ? row.user_b : row.user_a
+
+            struct ProfileRow: Decodable {
+                let username: String
+                let avatar_url: String?
+            }
+            guard let profile: ProfileRow = try? await client.from("profiles")
+                .select("username, avatar_url")
+                .eq("id", value: otherId)
+                .single()
+                .execute()
+                .value
+            else { continue }
+
+            struct LastMessageRow: Decodable { let text: String }
+            let lastMessage: LastMessageRow? = try? await client.from("messages")
+                .select("text")
+                .eq("conversation_id", value: row.id)
+                .order("created_at", ascending: false)
+                .limit(1)
+                .single()
+                .execute()
+                .value
+
+            summaries.append(ConversationSummary(
+                id: row.id, otherUserId: otherId, otherUsername: profile.username,
+                otherAvatarUrl: profile.avatar_url, lastMessageText: lastMessage?.text,
+                lastMessageAt: row.last_message_at
+            ))
+        }
+        return summaries
+    }
+
+    static func fetchMessages(conversationId: UUID) async throws -> [DBMessage] {
+        try ensureSignedIn()
+        return try await client.from("messages")
+            .select()
+            .eq("conversation_id", value: conversationId)
+            .order("created_at", ascending: true)
+            .execute()
+            .value
+    }
+
+    static func sendMessage(conversationId: UUID, text: String) async throws {
+        try ensureSignedIn()
+        guard let myId = client.auth.currentSession?.user.id else { throw SupabaseError.notSignedIn }
+
+        struct NewMessage: Encodable {
+            let conversation_id: UUID
+            let sender_id: UUID
+            let text: String
+        }
+        try await client.from("messages")
+            .insert(NewMessage(conversation_id: conversationId, sender_id: myId, text: text))
+            .execute()
+
+        struct TouchConversation: Encodable { let last_message_at: Date }
+        try await client.from("conversations")
+            .update(TouchConversation(last_message_at: Date()))
+            .eq("id", value: conversationId)
+            .execute()
+    }
 }
