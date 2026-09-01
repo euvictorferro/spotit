@@ -318,9 +318,11 @@ struct UserProfileView: View {
                         PostDetailView(post: post)
                     }
                 } label: {
-                    WalletPhotoThumb(fotoUrl: post.fotoUrl, raridade: post.raridade ?? 1)
-                        .frame(maxWidth: .infinity)
-                        .aspectRatio(3 / 4, contentMode: .fill)
+                    Color.clear
+                        .aspectRatio(3 / 4, contentMode: .fit)
+                        .overlay {
+                            WalletPhotoThumb(fotoUrl: post.fotoUrl, raridade: post.raridade ?? 1)
+                        }
                         .clipped()
                 }
             }
