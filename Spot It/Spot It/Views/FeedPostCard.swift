@@ -32,7 +32,7 @@ struct FeedPostCard: View {
                 .aspectRatio(4 / 5, contentMode: .fit)
                 .clipShape(RoundedRectangle(cornerRadius: Theme.cornerRadius))
                 .overlay(alignment: .topTrailing) {
-                    valueChip
+                    if post.isCarPost { valueChip }
                 }
 
             actions
@@ -44,6 +44,15 @@ struct FeedPostCard: View {
             }
 
             captionText
+
+            if let location = post.location, !location.isEmpty {
+                HStack(spacing: 4) {
+                    Image(systemName: "mappin.and.ellipse")
+                    Text(location)
+                }
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+            }
         }
         .fullScreenCover(isPresented: $showDetails) {
             CarDetailPageView(item: WalletItem(dbPost: post))
@@ -119,23 +128,44 @@ struct FeedPostCard: View {
         }
     }
 
+    /// Carrossel quando tem mais de 1 foto (post casual do feed) — post de
+    /// carro sempre tem 1 foto só, então cai direto na imagem única.
     private var photo: some View {
-        AsyncImage(url: URL(string: post.fotoUrl)) { phase in
+        Group {
+            if post.photos.count > 1 {
+                TabView {
+                    ForEach(post.photos, id: \.self) { url in
+                        photoImage(url)
+                    }
+                }
+                .tabViewStyle(.page)
+            } else {
+                photoImage(post.fotoUrl)
+            }
+        }
+    }
+
+    private func photoImage(_ url: String) -> some View {
+        AsyncImage(url: URL(string: url)) { phase in
             switch phase {
             case .success(let image):
                 image.resizable().scaledToFill()
             default:
                 LinearGradient(
-                    colors: [Theme.rarityColor(post.raridade).opacity(0.6), Theme.rarityColor(post.raridade).opacity(0.15)],
+                    colors: [placeholderColor.opacity(0.6), placeholderColor.opacity(0.15)],
                     startPoint: .top, endPoint: .bottom
                 )
-                .overlay(Image(systemName: "car.side.fill").foregroundStyle(Theme.rarityColor(post.raridade)))
+                .overlay(Image(systemName: "car.side.fill").foregroundStyle(placeholderColor))
             }
         }
     }
 
+    private var placeholderColor: Color {
+        post.raridade.map(Theme.rarityColor) ?? .gray
+    }
+
     private var valueChip: some View {
-        Text(post.valorEstimadoUsd.asDollars)
+        Text((post.valorEstimadoUsd ?? 0).asDollars)
             .font(.system(.footnote, design: .rounded, weight: .bold))
             .foregroundStyle(.white)
             .padding(.horizontal, Theme.Spacing.sm)
@@ -172,10 +202,12 @@ struct FeedPostCard: View {
 
             Spacer()
 
-            Button {
-                showDetails = true
-            } label: {
-                Image(systemName: "info.circle")
+            if post.isCarPost {
+                Button {
+                    showDetails = true
+                } label: {
+                    Image(systemName: "info.circle")
+                }
             }
         }
         .font(.system(size: 20))
@@ -252,7 +284,7 @@ private struct FollowButton: View {
 
 #Preview {
     NavigationStack {
-        FeedPostCard(post: DBPost(id: UUID(), userId: UUID(), username: "rk.spotter", avatarUrl: nil, modelo: "Porsche 911 GT3 RS", raridade: 8, valorEstimadoUsd: 223_000, fotoUrl: "", caption: "track day pack completo", createdAt: Date(), likeCount: 42, commentCount: 3, likedByMe: false))
+        FeedPostCard(post: DBPost(id: UUID(), userId: UUID(), username: "rk.spotter", avatarUrl: nil, modelo: "Porsche 911 GT3 RS", raridade: 8, valorEstimadoUsd: 223_000, fotoUrl: "", photos: [""], location: nil, caption: "track day pack completo", createdAt: Date(), likeCount: 42, commentCount: 3, likedByMe: false))
             .padding()
     }
 }

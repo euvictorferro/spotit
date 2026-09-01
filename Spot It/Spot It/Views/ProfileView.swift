@@ -14,7 +14,10 @@ private enum ProfileTab {
 }
 
 struct ProfileView: View {
-    @State private var items: [WalletItem] = []
+    // Grade "Fotos" mostra só o que foi publicado no Feed (post de carro +
+    // post casual) — igual já funciona no perfil de outras pessoas. A
+    // Wallet privada (todos os carros escaneados) continua só na aba Wallet.
+    @State private var posts: [DBPost] = []
     @State private var isLoading = true
     @State private var tab: ProfileTab = .fotos
     @State private var showSettings = false
@@ -85,7 +88,7 @@ struct ProfileView: View {
                 Task { await loadFollowCounts() }
             }
             .overlay {
-                if isLoading && items.isEmpty {
+                if isLoading && posts.isEmpty {
                     WheelLoadingView(size: 44)
                 }
             }
@@ -112,7 +115,7 @@ struct ProfileView: View {
             HStack(spacing: Theme.Spacing.lg) {
                 avatarView
 
-                statColumn(value: "\(items.count)", label: "posts")
+                statColumn(value: "\(posts.count)", label: "posts")
                 statColumn(value: "\(followersCount)", label: "seguidores")
                 statColumn(value: "\(followingCount)", label: "seguindo")
             }
@@ -196,27 +199,24 @@ struct ProfileView: View {
 
     @ViewBuilder
     private var photosGrid: some View {
-        if items.isEmpty {
+        if posts.isEmpty {
             if !isLoading {
-                EmptyStateView(icon: "photo.on.rectangle", message: "Você ainda não fotografou nenhum carro.")
+                EmptyStateView(icon: "photo.on.rectangle", message: "Você ainda não publicou nada. Toque no \"+\" no Feed pra postar.")
             }
         } else {
             LazyVGrid(columns: columns, spacing: 2) {
-                ForEach(items) { item in
-                    AsyncImage(url: URL(string: item.fotoUrl)) { phase in
-                        switch phase {
-                        case .success(let image):
-                            image.resizable().scaledToFill()
-                        default:
-                            LinearGradient(
-                                colors: [Theme.rarityColor(item.raridade).opacity(0.6), Theme.rarityColor(item.raridade).opacity(0.15)],
-                                startPoint: .top, endPoint: .bottom
-                            )
-                            .overlay(Image(systemName: "car.side.fill").foregroundStyle(Theme.rarityColor(item.raridade)))
+                ForEach(posts) { post in
+                    NavigationLink {
+                        if post.isCarPost {
+                            CarDetailPageView(item: WalletItem(dbPost: post))
+                        } else {
+                            PostDetailView(post: post)
                         }
+                    } label: {
+                        WalletPhotoThumb(fotoUrl: post.fotoUrl, raridade: post.raridade ?? 1)
+                            .aspectRatio(3 / 4, contentMode: .fill)
+                            .clipped()
                     }
-                    .aspectRatio(1, contentMode: .fill)
-                    .clipped()
                 }
             }
         }
@@ -232,7 +232,9 @@ struct ProfileView: View {
 
     private func load() async {
         isLoading = true
-        items = (try? await SupabaseService.fetchWalletItems()) ?? []
+        if let userId = authService.session?.user.id {
+            posts = (try? await SupabaseService.fetchPosts(userId: userId)) ?? []
+        }
         await loadFollowCounts()
         isLoading = false
     }

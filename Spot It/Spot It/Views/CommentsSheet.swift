@@ -121,5 +121,5 @@ struct CommentsSheet: View {
 }
 
 #Preview {
-    CommentsSheet(post: DBPost(id: UUID(), userId: UUID(), username: "rk.spotter", avatarUrl: nil, modelo: "Porsche 911 GT3 RS", raridade: 8, valorEstimadoUsd: 223_000, fotoUrl: "", caption: nil, createdAt: Date(), likeCount: 0, commentCount: 0, likedByMe: false))
+    CommentsSheet(post: DBPost(id: UUID(), userId: UUID(), username: "rk.spotter", avatarUrl: nil, modelo: "Porsche 911 GT3 RS", raridade: 8, valorEstimadoUsd: 223_000, fotoUrl: "", photos: [""], location: nil, caption: nil, createdAt: Date(), likeCount: 0, commentCount: 0, likedByMe: false))
 }

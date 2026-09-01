@@ -87,13 +87,15 @@ extension WalletItem {
 
     /// Converte um post real (DBPost) pra abrir a mesma CarDetailPageView da
     /// Wallet. DBPost não tem ano/motor/fato interessante — ficam nil, a
-    /// página já trata seções opcionais como ausentes.
+    /// página já trata seções opcionais como ausentes. Só chamar pra posts
+    /// de carro (post.isCarPost) — os `??` são só pra satisfazer o tipo,
+    /// posts casuais não abrem essa página.
     init(dbPost post: DBPost) {
         id = post.id
-        modelo = post.modelo
+        modelo = post.modelo ?? "Post"
         ano = nil
-        raridade = post.raridade
-        valorEstimadoUsd = post.valorEstimadoUsd
+        raridade = post.raridade ?? 1
+        valorEstimadoUsd = post.valorEstimadoUsd ?? 0
         fotoUrl = post.fotoUrl
         createdAt = post.createdAt
         lat = nil

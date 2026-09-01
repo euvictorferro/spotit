@@ -311,18 +311,17 @@ struct UserProfileView: View {
     private var photosGrid: some View {
         LazyVGrid(columns: columns, spacing: 2) {
             ForEach(posts) { post in
-                AsyncImage(url: URL(string: post.fotoUrl)) { phase in
-                    if case .success(let image) = phase {
-                        image.resizable().scaledToFill()
+                NavigationLink {
+                    if post.isCarPost {
+                        CarDetailPageView(item: WalletItem(dbPost: post))
                     } else {
-                        LinearGradient(
-                            colors: [Theme.rarityColor(post.raridade).opacity(0.6), Theme.rarityColor(post.raridade).opacity(0.15)],
-                            startPoint: .top, endPoint: .bottom
-                        )
+                        PostDetailView(post: post)
                     }
+                } label: {
+                    WalletPhotoThumb(fotoUrl: post.fotoUrl, raridade: post.raridade ?? 1)
+                        .aspectRatio(3 / 4, contentMode: .fill)
+                        .clipped()
                 }
-                .aspectRatio(1, contentMode: .fill)
-                .clipped()
             }
         }
     }

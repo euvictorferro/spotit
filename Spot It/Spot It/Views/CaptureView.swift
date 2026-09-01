@@ -400,6 +400,12 @@ struct CameraPicker: View {
     var maxPhotos: Int
     var onIdentify: (() -> Void)?
     var onReset: (() -> Void)?
+    /// Texto do botão de avançar — "Identificar" no scan de carro (usa IA),
+    /// "Avançar" no post casual do feed (sem IA nenhuma).
+    var advanceButtonTitle: String = "Identificar"
+    /// Some quando fornecido — o scan de carro não aceita foto da galeria
+    /// de propósito (precisão da IA), mas o post casual do feed aceita.
+    var onPickFromGallery: (() -> Void)?
 
     @StateObject private var camera = CameraModel()
     @State private var isFlashOn = false
@@ -427,7 +433,9 @@ struct CameraPicker: View {
                 maxPhotos: maxPhotos,
                 onIdentify: onIdentify,
                 onReset: onReset,
-                zoomFactor: currentZoom
+                zoomFactor: currentZoom,
+                advanceButtonTitle: advanceButtonTitle,
+                onPickFromGallery: onPickFromGallery
             )
             .zIndex(1)
         }
@@ -462,6 +470,8 @@ private struct CameraOverlayView: View {
     let onIdentify: (() -> Void)?
     let onReset: (() -> Void)?
     var zoomFactor: CGFloat = 1
+    var advanceButtonTitle: String = "Identificar"
+    var onPickFromGallery: (() -> Void)?
     @State private var isFlashOn = false
 
     var body: some View {
@@ -469,6 +479,9 @@ private struct CameraOverlayView: View {
             VStack {
                 HStack {
                     iconButton("xmark", action: onDismiss)
+                    if let onPickFromGallery {
+                        iconButton("photo.on.rectangle", action: onPickFromGallery)
+                    }
                     Spacer()
                     if zoomFactor > 1.05 {
                         Text(String(format: "%.1fx", zoomFactor))
@@ -525,7 +538,7 @@ private struct CameraOverlayView: View {
 
                     Group {
                         if let onIdentify {
-                            Button("Identificar", action: onIdentify)
+                            Button(advanceButtonTitle, action: onIdentify)
                                 .buttonStyle(.borderedProminent)
                                 .tint(.accentColor)
                         }

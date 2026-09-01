@@ -646,10 +646,48 @@ struct SupabaseService {
             .execute()
     }
 
+    /// Post casual do novo fluxo de câmera do feed — sem carro/IA, carrossel
+    /// de fotos + legenda/localização/contas marcadas, igual Instagram.
+    static func createCasualPost(photoUrls: [String], caption: String?, location: String?, mentionedUserIds: [UUID], isDraft: Bool) async throws {
+        try ensureSignedIn()
+        guard let myId = client.auth.currentSession?.user.id else { throw SupabaseError.notSignedIn }
+        guard let coverUrl = photoUrls.first else { return }
+
+        struct NewPost: Encodable {
+            let user_id: UUID
+            let foto_url: String
+            let caption: String?
+            let location: String?
+            let is_draft: Bool
+        }
+        struct InsertedRow: Decodable { let id: UUID }
+        let inserted: InsertedRow = try await client.from("posts")
+            .insert(NewPost(user_id: myId, foto_url: coverUrl, caption: caption, location: location, is_draft: isDraft))
+            .select("id")
+            .single()
+            .execute()
+            .value
+
+        struct NewPhoto: Encodable { let post_id: UUID; let url: String; let position: Int }
+        try await client.from("post_photos")
+            .insert(photoUrls.enumerated().map { NewPhoto(post_id: inserted.id, url: $1, position: $0) })
+            .execute()
+
+        guard !mentionedUserIds.isEmpty else { return }
+        struct NewMention: Encodable { let post_id: UUID; let mentioned_user_id: UUID }
+        try await client.from("post_mentions")
+            .insert(mentionedUserIds.map { NewMention(post_id: inserted.id, mentioned_user_id: $0) })
+            .execute()
+    }
+
     static func fetchFeedPosts() async throws -> [DBPost] {
         try ensureSignedIn()
+        // is_draft explícito: a RLS libera o dono ver os próprios rascunhos
+        // (pra uma futura tela de rascunhos), então sem esse filtro os seus
+        // próprios rascunhos vazavam pro feed geral.
         let rows: [PostRow] = try await client.from("posts")
             .select()
+            .eq("is_draft", value: false)
             .order("created_at", ascending: false)
             .limit(50)
             .execute()
@@ -662,6 +700,7 @@ struct SupabaseService {
         let rows: [PostRow] = try await client.from("posts")
             .select()
             .eq("user_id", value: userId)
+            .eq("is_draft", value: false)
             .order("created_at", ascending: false)
             .execute()
             .value
@@ -671,16 +710,30 @@ struct SupabaseService {
     private struct PostRow: Decodable {
         let id: UUID
         let user_id: UUID
-        let modelo: String
-        let raridade: Int
-        let valor_estimado_usd: Double
+        let modelo: String?
+        let raridade: Int?
+        let valor_estimado_usd: Double?
         let foto_url: String
+        let location: String?
         let caption: String?
         let created_at: Date
     }
 
     private static func resolvePosts(_ rows: [PostRow]) async throws -> [DBPost] {
         let myId = client.auth.currentSession?.user.id
+
+        // Uma query só pra todas as fotos do carrossel (em vez de 1 por
+        // post) — post antigo sem post_photos cai no fallback de 1 foto
+        // (foto_url) mais abaixo.
+        struct PhotoRow: Decodable { let post_id: UUID; let url: String }
+        let photoRows: [PhotoRow] = rows.isEmpty ? [] : ((try? await client.from("post_photos")
+            .select("post_id, url")
+            .in("post_id", values: rows.map(\.id.uuidString))
+            .order("position", ascending: true)
+            .execute()
+            .value) ?? [])
+        var photosByPost: [UUID: [String]] = [:]
+        for photo in photoRows { photosByPost[photo.post_id, default: []].append(photo.url) }
 
         var posts: [DBPost] = []
         for row in rows {
@@ -717,10 +770,12 @@ struct SupabaseService {
                 likedByMe = !mine.isEmpty
             }
 
+            let photos = photosByPost[row.id] ?? [row.foto_url]
             posts.append(DBPost(
                 id: row.id, userId: row.user_id, username: profile.username, avatarUrl: profile.avatar_url,
                 modelo: row.modelo, raridade: row.raridade, valorEstimadoUsd: row.valor_estimado_usd,
-                fotoUrl: row.foto_url, caption: row.caption, createdAt: row.created_at,
+                fotoUrl: photos.first ?? row.foto_url, photos: photos, location: row.location,
+                caption: row.caption, createdAt: row.created_at,
                 likeCount: likeCount, commentCount: commentCount, likedByMe: likedByMe
             ))
         }

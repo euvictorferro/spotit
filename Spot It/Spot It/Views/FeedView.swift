@@ -8,6 +8,7 @@ struct FeedView: View {
     @State private var posts: [DBPost] = []
     @State private var loadFailed = false
     @State private var unreadNotifications = 0
+    @State private var showNewPost = false
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -32,7 +33,12 @@ struct FeedView: View {
             .background(AppGradientBackground())
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Text("Spot It").font(.headline)
+                    Button {
+                        showNewPost = true
+                    } label: {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.title2)
+                    }
                 }
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     NavigationLink(destination: MapView(scope: .feed)) {
@@ -61,6 +67,12 @@ struct FeedView: View {
             // (que marca como lida) precisa recontar o badge.
             .onChange(of: path) { _, newPath in
                 if newPath.isEmpty { Task { await loadUnreadCount() } }
+            }
+            .fullScreenCover(isPresented: $showNewPost) {
+                NewFeedPostFlow(onFinish: {
+                    showNewPost = false
+                    Task { await load() }
+                })
             }
         }
         .preferredColorScheme(.dark)
