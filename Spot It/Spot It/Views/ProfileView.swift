@@ -41,7 +41,7 @@ struct ProfileView: View {
     private let columns = [GridItem(.flexible(), spacing: 2), GridItem(.flexible(), spacing: 2), GridItem(.flexible(), spacing: 2)]
 
     private var shareText: String {
-        "Confere meu perfil no Spot It: @victorferro"
+        "Confere meu perfil no Spot It: @\(username)"
     }
 
     var body: some View {
