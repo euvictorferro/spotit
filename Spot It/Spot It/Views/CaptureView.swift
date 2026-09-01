@@ -17,6 +17,7 @@ struct CaptureView: View {
     @State private var carInfo: CarInfo?
     @State private var isLoading = false
     @State private var errorMessage: String?
+    @State private var lastIdentifyDatas: [Data] = []
     #if DEBUG
     @State private var debugPickerItem: PhotosPickerItem?
     #endif
@@ -36,7 +37,7 @@ struct CaptureView: View {
             }
         }
         .sheet(item: $carInfo, onDismiss: retake) { info in
-            ResultView(carInfo: info, image: capturedImages.first, onFinish: { dismiss() })
+            ResultView(carInfo: info, image: capturedImages.first, imagesDataForEnrich: lastIdentifyDatas, onFinish: { dismiss() })
         }
         .preferredColorScheme(.dark)
     }
@@ -146,10 +147,14 @@ struct CaptureView: View {
         isIdentifying = true
         let datas = capturedImages.compactMap { $0.resizedForUpload().jpegDataCapped() }
         guard !datas.isEmpty else { return }
+        lastIdentifyDatas = datas
         isLoading = true
         errorMessage = nil
         do {
-            let info = try await RecognizeService.recognize(imagesData: datas)
+            // quick: resposta enxuta (só os 7 campos essenciais) — mostra o
+            // resultado rápido. O perfil completo (raridade, mercado, design
+            // etc) é carregado depois em background pelo ResultView.
+            let info = try await RecognizeService.recognize(imagesData: datas, quick: true)
             if info.reconhecido {
                 carInfo = info
             } else {

@@ -2,17 +2,32 @@ import CoreLocation
 import SwiftUI
 
 struct ResultView: View {
-    let carInfo: CarInfo
     let image: UIImage?
+    /// Fotos já comprimidas usadas no scan — reaproveitadas pra pedir o
+    /// perfil completo em background, sem precisar recomprimir nem pedir a
+    /// câmera de novo.
+    let imagesDataForEnrich: [Data]
     /// Fecha o fluxo de captura inteiro (não só esse sheet) — usado no
     /// "Fechar" e depois de salvar; o retake (ícone de câmera) usa o
     /// dismiss() normal, que só fecha esse resultado e volta pra câmera.
     var onFinish: () -> Void = {}
     @Environment(\.dismiss) private var dismiss
+    // @State em vez de let: começa só com os 7 campos essenciais (resposta
+    // rápida) e é substituído pelo perfil completo assim que a chamada de
+    // enrichment em background termina.
+    @State var carInfo: CarInfo
+    @State private var isEnriching = true
     @State private var isSaving = false
     @State private var saveError: String?
     @State private var valueFeedback: Bool?
     @State private var infoFeedback: Bool?
+
+    init(carInfo: CarInfo, image: UIImage?, imagesDataForEnrich: [Data], onFinish: @escaping () -> Void = {}) {
+        self._carInfo = State(initialValue: carInfo)
+        self.image = image
+        self.imagesDataForEnrich = imagesDataForEnrich
+        self.onFinish = onFinish
+    }
 
     var body: some View {
         NavigationStack {
@@ -33,6 +48,15 @@ struct ResultView: View {
                                 paragraphSection(title: "Mercado e Valorização", text: analiseMercado)
                             }
                             FeedbackPromptView(question: "Esse valor te parece razoável?", answer: $valueFeedback)
+
+                            if isEnriching {
+                                HStack(spacing: Theme.Spacing.xs) {
+                                    ProgressView().controlSize(.small)
+                                    Text("Carregando mais detalhes...")
+                                        .font(.footnote)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
 
                             Divider()
                             detailsSection
@@ -80,7 +104,21 @@ struct ResultView: View {
                         .disabled(isSaving)
                 }
             }
+            .task { await enrich() }
         }
+    }
+
+    /// 2ª chamada em background pedindo o perfil completo (raridade, mercado,
+    /// design, variantes etc) — a 1ª (quick) já mostrou o resultado rápido.
+    private func enrich() async {
+        guard carInfo.reconhecido, !imagesDataForEnrich.isEmpty else {
+            isEnriching = false
+            return
+        }
+        if let full = try? await RecognizeService.recognize(imagesData: imagesDataForEnrich, quick: false), full.reconhecido {
+            carInfo = full
+        }
+        isEnriching = false
     }
 
     // MARK: - Hero

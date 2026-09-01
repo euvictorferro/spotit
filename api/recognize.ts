@@ -3,7 +3,7 @@ import Anthropic from '@anthropic-ai/sdk';
 interface Req {
   method?: string;
   headers?: Record<string, string | string[] | undefined>;
-  body?: { imageBase64?: string; images?: string[] };
+  body?: { imageBase64?: string; images?: string[]; quick?: boolean };
 }
 interface Res {
   status(code: number): Res;
@@ -90,6 +90,23 @@ Responda SOMENTE com um JSON válido, sem markdown, no formato:
 Faça sua melhor estimativa mesmo se não tiver 100% de certeza da variante exata (ex: confundir STO com EVO) — responda com o modelo mais provável, não recuse por incerteza de detalhe. Se receber mais de uma foto, são ângulos diferentes do mesmo carro — combine as pistas de todas (crachás, silhueta, faróis) antes de decidir. Só responda { "reconhecido": false } se a foto claramente não for de um carro raro/exótico (ex: carro popular comum como Corolla, Civic, ou a foto não é de um carro).
 Todos os campos numéricos/texto além dos 7 primeiros são opcionais — use null quando não tiver certeza, nunca invente números.`;
 
+// Chamada "quick" — só os 7 campos essenciais, sem o perfil completo (que
+// é uma resposta bem mais longa e domina o tempo do scan). O app pede essa
+// primeiro pra mostrar resultado rápido, e completa o resto depois com uma
+// 2ª chamada em background (quick: false) usando as mesmas fotos.
+const QUICK_SYSTEM_PROMPT = `Você identifica carros raros/supercarros em fotos.
+Responda SOMENTE com um JSON válido, sem markdown, no formato:
+{
+  "reconhecido": boolean,
+  "modelo": string,
+  "ano": number,
+  "motor": string,
+  "raridade": number (1 a 10, quão raro/exótico é o carro),
+  "valor_estimado_usd": number,
+  "fato_interessante": string
+}
+Faça sua melhor estimativa mesmo se não tiver 100% de certeza da variante exata — responda com o modelo mais provável, não recuse por incerteza de detalhe. Se receber mais de uma foto, são ângulos diferentes do mesmo carro — combine as pistas de todas antes de decidir. Só responda { "reconhecido": false } se a foto claramente não for de um carro raro/exótico (ex: carro popular comum como Corolla, Civic, ou a foto não é de um carro).`;
+
 export default async function handler(req: Req, res: Res) {
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'method not allowed' });
@@ -101,7 +118,7 @@ export default async function handler(req: Req, res: Res) {
     return;
   }
 
-  const { imageBase64, images } = req.body ?? {};
+  const { imageBase64, images, quick } = req.body ?? {};
   const allImages = images?.length ? images : imageBase64 ? [imageBase64] : [];
   if (!allImages.length) {
     res.status(400).json({ error: 'imageBase64 ou images obrigatório' });
@@ -117,8 +134,9 @@ export default async function handler(req: Req, res: Res) {
     // 1024 cortava a resposta no meio em carros com bastante texto pros
     // campos extras (design/raridade/mercado/variantes), quebrando o JSON e
     // fazendo cair no fallback de "não reconhecido" mesmo em carros comuns.
-    max_tokens: 2048,
-    system: SYSTEM_PROMPT,
+    // No modo quick só os 7 campos essenciais, então 400 sobra de sobra.
+    max_tokens: quick ? 400 : 2048,
+    system: quick ? QUICK_SYSTEM_PROMPT : SYSTEM_PROMPT,
     messages: [
       {
         role: 'user',

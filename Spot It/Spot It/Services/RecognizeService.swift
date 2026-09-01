@@ -25,11 +25,21 @@ struct RecognizeService {
 
     /// Aceita múltiplas fotos (ângulos diferentes do mesmo carro) — usado no
     /// fallback quando a 1ª foto sozinha não é reconhecida.
-    static func recognize(imagesData: [Data]) async throws -> CarInfo {
+    ///
+    /// `quick: true` pede só os 7 campos essenciais (resposta bem mais curta
+    /// = scan mais rápido) — usado pra mostrar o resultado na hora, com o
+    /// perfil completo (raridade, mercado, design etc) vindo depois numa 2ª
+    /// chamada em background (`quick: false`).
+    static func recognize(imagesData: [Data], quick: Bool = false) async throws -> CarInfo {
         // O endpoint exige um usuário autenticado (senão qualquer um na
         // internet gastava nosso orçamento de IA sem nem ter o app).
         guard let accessToken = SupabaseService.client.auth.currentSession?.accessToken else {
             throw RecognizeError.notSignedIn
+        }
+
+        struct RecognizeBody: Encodable {
+            let images: [String]
+            let quick: Bool
         }
 
         let images = imagesData.map { $0.base64EncodedString() }
@@ -37,7 +47,7 @@ struct RecognizeService {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
-        request.httpBody = try JSONEncoder().encode(["images": images])
+        request.httpBody = try JSONEncoder().encode(RecognizeBody(images: images, quick: quick))
         // Vários ângulos + resposta longa podem passar do timeout padrão de
         // 60s do URLSession — a função no servidor já tem até 60s (vercel.json).
         request.timeoutInterval = 90
