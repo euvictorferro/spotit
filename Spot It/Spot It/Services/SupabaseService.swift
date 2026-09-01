@@ -453,6 +453,58 @@ struct SupabaseService {
         return (followersResponse.count ?? 0, followingResponse.count ?? 0)
     }
 
+    static func blockUser(userId: UUID) async throws {
+        try ensureSignedIn()
+        guard let myId = client.auth.currentSession?.user.id else { throw SupabaseError.notSignedIn }
+        struct NewBlock: Encodable {
+            let blocker_id: UUID
+            let blocked_id: UUID
+        }
+        try await client.from("blocks")
+            .insert(NewBlock(blocker_id: myId, blocked_id: userId))
+            .execute()
+    }
+
+    static func unblockUser(userId: UUID) async throws {
+        try ensureSignedIn()
+        guard let myId = client.auth.currentSession?.user.id else { throw SupabaseError.notSignedIn }
+        try await client.from("blocks")
+            .delete()
+            .eq("blocker_id", value: myId)
+            .eq("blocked_id", value: userId)
+            .execute()
+    }
+
+    static func isBlocked(userId: UUID) async throws -> Bool {
+        try ensureSignedIn()
+        guard let myId = client.auth.currentSession?.user.id else { throw SupabaseError.notSignedIn }
+        struct BlockRow: Decodable { let blocker_id: UUID }
+        let rows: [BlockRow] = try await client.from("blocks")
+            .select("blocker_id")
+            .eq("blocker_id", value: myId)
+            .eq("blocked_id", value: userId)
+            .limit(1)
+            .execute()
+            .value
+        return !rows.isEmpty
+    }
+
+    /// Denúncia de usuário e/ou post — pelo menos um dos dois precisa vir
+    /// preenchido (constraint `report_has_target`, migration 0017).
+    static func reportUser(userId: UUID?, postId: UUID?, reason: String) async throws {
+        try ensureSignedIn()
+        guard let myId = client.auth.currentSession?.user.id else { throw SupabaseError.notSignedIn }
+        struct NewReport: Encodable {
+            let reporter_id: UUID
+            let reported_user_id: UUID?
+            let post_id: UUID?
+            let reason: String
+        }
+        try await client.from("reports")
+            .insert(NewReport(reporter_id: myId, reported_user_id: userId, post_id: postId, reason: reason))
+            .execute()
+    }
+
     static func createPost(walletItemId: UUID?, modelo: String, raridade: Int, valorEstimadoUsd: Double, fotoUrl: String, caption: String?) async throws {
         try ensureSignedIn()
         guard let myId = client.auth.currentSession?.user.id else { throw SupabaseError.notSignedIn }

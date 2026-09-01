@@ -7,9 +7,14 @@ struct FeedPostCard: View {
     @State private var likeCount: Int
     @State private var showDetails = false
     @State private var showComments = false
+    @State private var showReport = false
+    @State private var showBlockConfirm = false
+    @State private var isBlocking = false
+    var onBlocked: (() -> Void)?
 
-    init(post: DBPost) {
+    init(post: DBPost, onBlocked: (() -> Void)? = nil) {
         self.post = post
+        self.onBlocked = onBlocked
         self._isLiked = State(initialValue: post.likedByMe)
         self._likeCount = State(initialValue: post.likeCount)
     }
@@ -83,7 +88,36 @@ struct FeedPostCard: View {
 
             if post.userId != SupabaseService.client.auth.currentSession?.user.id {
                 FollowButton(userId: post.userId)
+
+                Menu {
+                    Button("Denunciar Post", systemImage: "flag") { showReport = true }
+                    Button("Bloquear @\(post.username)", systemImage: "hand.raised", role: .destructive) { showBlockConfirm = true }
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .foregroundStyle(.secondary)
+                        .padding(.leading, Theme.Spacing.xs)
+                }
             }
+        }
+        .sheet(isPresented: $showReport) {
+            ReportSheet { reason in
+                try await SupabaseService.reportUser(userId: post.userId, postId: post.id, reason: reason)
+            }
+        }
+        .confirmationDialog("Bloquear @\(post.username)?", isPresented: $showBlockConfirm, titleVisibility: .visible) {
+            Button("Bloquear", role: .destructive) { Task { await block() } }
+            Button("Cancelar", role: .cancel) {}
+        } message: {
+            Text("Vocês não vão mais ver posts, comentários nem mensagens um do outro.")
+        }
+        .disabled(isBlocking)
+    }
+
+    private func block() async {
+        isBlocking = true
+        defer { isBlocking = false }
+        if (try? await SupabaseService.blockUser(userId: post.userId)) != nil {
+            onBlocked?()
         }
     }
 

@@ -32,6 +32,10 @@ struct UserProfileView: View {
     @State private var openConversationId: UUID?
     @State private var isStartingConversation = false
     @State private var errorMessage: String?
+    @State private var isBlocked = false
+    @State private var isTogglingBlock = false
+    @State private var showReport = false
+    @State private var showBlockConfirm = false
 
     init(username: String, avatarInitials: String, avatarColors: [Color], userId: UUID?) {
         self.username = username
@@ -83,10 +87,65 @@ struct UserProfileView: View {
             ToolbarItem(placement: .principal) {
                 Text("@\(username)").font(.headline)
             }
+            if let userId {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        Button("Denunciar Perfil", systemImage: "flag") { showReport = true }
+                        Button(
+                            isBlocked ? "Desbloquear" : "Bloquear",
+                            systemImage: "hand.raised",
+                            role: isBlocked ? nil : .destructive
+                        ) {
+                            if isBlocked {
+                                Task { await toggleBlock() }
+                            } else {
+                                showBlockConfirm = true
+                            }
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                    }
+                }
+            }
+        }
+        .sheet(isPresented: $showReport) {
+            ReportSheet { reason in
+                try await SupabaseService.reportUser(userId: userId, postId: nil, reason: reason)
+            }
+        }
+        .confirmationDialog("Bloquear @\(username)?", isPresented: $showBlockConfirm, titleVisibility: .visible) {
+            Button("Bloquear", role: .destructive) { Task { await toggleBlock() } }
+            Button("Cancelar", role: .cancel) {}
+        } message: {
+            Text("Vocês não vão mais ver posts, comentários nem mensagens um do outro.")
         }
         .task {
             await loadFollowState()
             await loadPosts()
+            await loadBlockState()
+        }
+    }
+
+    private func loadBlockState() async {
+        guard let userId else { return }
+        isBlocked = (try? await SupabaseService.isBlocked(userId: userId)) ?? false
+    }
+
+    private func toggleBlock() async {
+        guard let userId, !isTogglingBlock else { return }
+        isTogglingBlock = true
+        defer { isTogglingBlock = false }
+        do {
+            if isBlocked {
+                try await SupabaseService.unblockUser(userId: userId)
+                isBlocked = false
+            } else {
+                try await SupabaseService.blockUser(userId: userId)
+                isBlocked = true
+                isFollowing = false
+            }
+        } catch {
+            errorMessage = error.localizedDescription
         }
     }
 

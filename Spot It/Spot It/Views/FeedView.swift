@@ -19,7 +19,9 @@ struct FeedView: View {
                     ScrollView {
                         VStack(spacing: Theme.Spacing.lg) {
                             ForEach(posts) { post in
-                                FeedPostCard(post: post)
+                                FeedPostCard(post: post) {
+                                    posts.removeAll { $0.userId == post.userId }
+                                }
                             }
                         }
                         .padding(Theme.Spacing.md)
