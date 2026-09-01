@@ -296,15 +296,9 @@ struct WalletAllView: View {
                     .onTapGesture { toggle(item.id) }
             }
 
-            RoundedRectangle(cornerRadius: Theme.cornerRadius)
-                .fill(
-                    LinearGradient(
-                        colors: [Theme.rarityColor(item.raridade).opacity(0.55), Theme.rarityColor(item.raridade).opacity(0.15)],
-                        startPoint: .topLeading, endPoint: .bottomTrailing
-                    )
-                )
+            WalletPhotoThumb(fotoUrl: item.fotoUrl, raridade: item.raridade)
                 .frame(width: 56, height: 56)
-                .overlay(Image(systemName: "car.side.fill").foregroundStyle(Theme.rarityColor(item.raridade)))
+                .clipShape(RoundedRectangle(cornerRadius: Theme.cornerRadius))
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(item.modelo).font(.subheadline).fontWeight(.semibold)

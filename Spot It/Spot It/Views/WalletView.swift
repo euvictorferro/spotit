@@ -9,6 +9,7 @@ private enum WalletTab: String, CaseIterable {
 struct WalletView: View {
     @State private var items: [WalletItem] = []
     @State private var isLoading = true
+    @State private var loadFailed = false
     @State private var tab: WalletTab = .summary
     // Reseta a navegação sempre que a aba fica inativa — sem isso, sair pro
     // detalhe de um Set/carro e trocar de aba deixava a Wallet "presa" lá.
@@ -29,7 +30,10 @@ struct WalletView: View {
                     header
                     tabPicker
 
-                    if items.isEmpty && !isLoading {
+                    if items.isEmpty && loadFailed {
+                        EmptyStateView(icon: "wifi.slash", message: "Não deu pra carregar sua Wallet agora. Puxe pra atualizar.")
+                            .padding(.top, Theme.Spacing.lg)
+                    } else if items.isEmpty && !isLoading {
                         EmptyStateView(icon: "car.fill", message: "Sua Wallet está vazia. Tira uma foto de um carro raro pra começar sua coleção.")
                             .padding(.top, Theme.Spacing.lg)
                     } else {
@@ -131,7 +135,12 @@ struct WalletView: View {
 
     private func load() async {
         isLoading = true
-        items = (try? await SupabaseService.fetchWalletItems()) ?? []
+        loadFailed = false
+        do {
+            items = try await SupabaseService.fetchWalletItems()
+        } catch {
+            loadFailed = true
+        }
         isLoading = false
     }
 }

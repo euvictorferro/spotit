@@ -1,3 +1,4 @@
+import CoreLocation
 import SwiftUI
 
 struct ResultView: View {
@@ -72,7 +73,11 @@ struct ResultView: View {
             }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
+                    // Sem o disabled aqui, fechar no meio do save matava a
+                    // view antes do Task terminar — se desse erro, ninguém
+                    // mais estava escutando pra mostrar o saveError.
                     Button("Fechar") { onFinish() }
+                        .disabled(isSaving)
                 }
             }
         }
@@ -273,12 +278,16 @@ struct ResultView: View {
     }
 
     private func save() async {
-        guard let image, let data = image.jpegData(compressionQuality: 0.7) else { return }
+        // Mesma compressão do scan (resizedForUpload + cap) — a imagem
+        // original em resolução total (12MP+) deixava o upload lento e mais
+        // propenso a falhar em rede ruim.
+        guard let image, let data = image.resizedForUpload(maxDimension: 1600).jpegDataCapped(maxBytes: 900_000) else { return }
         isSaving = true
         saveError = nil
+        let coordinate = await LocationService.shared.currentLocation()
         do {
             let url = try await SupabaseService.uploadPhoto(imageData: data)
-            try await SupabaseService.saveWalletItem(car: carInfo, fotoUrl: url, lat: nil, lng: nil)
+            try await SupabaseService.saveWalletItem(car: carInfo, fotoUrl: url, lat: coordinate?.latitude, lng: coordinate?.longitude)
             onFinish()
         } catch {
             saveError = "Erro ao salvar: \(error.localizedDescription)"

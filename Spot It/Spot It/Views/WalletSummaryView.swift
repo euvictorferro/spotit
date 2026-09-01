@@ -105,15 +105,9 @@ private struct BestCarsCarousel: View {
                 VStack(spacing: Theme.Spacing.md) {
                     Text(page.item.modelo).font(.subheadline).fontWeight(.semibold)
 
-                    RoundedRectangle(cornerRadius: Theme.cornerRadius)
-                        .fill(
-                            LinearGradient(
-                                colors: [Theme.rarityColor(page.item.raridade).opacity(0.6), Theme.rarityColor(page.item.raridade).opacity(0.15)],
-                                startPoint: .top, endPoint: .bottom
-                            )
-                        )
+                    WalletPhotoThumb(fotoUrl: page.item.fotoUrl, raridade: page.item.raridade)
                         .frame(height: 130)
-                        .overlay(Image(systemName: "car.side.fill").font(.system(size: 40)).foregroundStyle(Theme.rarityColor(page.item.raridade)))
+                        .clipShape(RoundedRectangle(cornerRadius: Theme.cornerRadius))
 
                     Rectangle()
                         .fill(Color.white.opacity(0.15))
@@ -257,15 +251,9 @@ struct SetCard: View {
     private var cardContent: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
             if let mostExpensive {
-                RoundedRectangle(cornerRadius: Theme.cornerRadius)
-                    .fill(
-                        LinearGradient(
-                            colors: [Theme.rarityColor(mostExpensive.raridade).opacity(0.6), Theme.rarityColor(mostExpensive.raridade).opacity(0.15)],
-                            startPoint: .top, endPoint: .bottom
-                        )
-                    )
+                WalletPhotoThumb(fotoUrl: mostExpensive.fotoUrl, raridade: mostExpensive.raridade)
                     .frame(height: 100)
-                    .overlay(Image(systemName: "car.side.fill").font(.system(size: 32)).foregroundStyle(Theme.rarityColor(mostExpensive.raridade)))
+                    .clipShape(RoundedRectangle(cornerRadius: Theme.cornerRadius))
             } else {
                 BrandLogoBadge(brand: brand)
                     .frame(height: 100)

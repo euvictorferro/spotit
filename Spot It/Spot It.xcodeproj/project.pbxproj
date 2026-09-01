@@ -266,6 +266,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = Spotted;
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Precisamos do calendário pra adicionar eventos de carro que você confirmar presença.";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Precisamos da câmera pra identificar os carros que você fotografar.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Usamos sua localização pra marcar no mapa onde você avistou cada carro.";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Precisamos salvar fotos na sua galeria quando você exportar carros da sua coleção.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -302,6 +303,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = Spotted;
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Precisamos do calendário pra adicionar eventos de carro que você confirmar presença.";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Precisamos da câmera pra identificar os carros que você fotografar.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Usamos sua localização pra marcar no mapa onde você avistou cada carro.";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Precisamos salvar fotos na sua galeria quando você exportar carros da sua coleção.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
