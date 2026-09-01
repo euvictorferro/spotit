@@ -16,7 +16,7 @@ struct SetDetailView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
                 VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-                    Text(verbatim: "\(items.count) / \(info.knownModels) carros")
+                    Text(verbatim: info.knownModels > 0 ? "\(items.count) / \(info.knownModels) carros" : "\(items.count) carros")
                         .font(.title3).fontWeight(.heavy).foregroundStyle(Color.accentColor)
                     Text(totalValue.asDollars)
                         .font(.system(.title2, design: .rounded, weight: .bold))

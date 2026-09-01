@@ -51,7 +51,7 @@ struct WalletAllView: View {
     }
 
     private var countries: [String] {
-        Array(Set(items.compactMap { CarBrandInfo.info(for: $0.modelo)?.country })).sorted()
+        Array(Set(items.map { CarBrandInfo.info(for: $0.modelo).country })).sorted()
     }
 
     private var editions: [String] {
@@ -82,7 +82,7 @@ struct WalletAllView: View {
     private var filteredAndSorted: [WalletItem] {
         var result = items
         if let selectedCountry {
-            result = result.filter { CarBrandInfo.info(for: $0.modelo)?.country == selectedCountry }
+            result = result.filter { CarBrandInfo.info(for: $0.modelo).country == selectedCountry }
         }
         if let selectedEdition {
             result = result.filter { $0.edicaoEspecial == selectedEdition }
@@ -109,6 +109,15 @@ struct WalletAllView: View {
         case .addedOldestFirst: result.sort { $0.createdAt < $1.createdAt }
         }
         return result
+    }
+
+    /// Sem isso, selecionar carros, trocar o filtro (ficando fora da vista)
+    /// e confirmar "Excluir" apagava itens que nem apareciam mais na tela —
+    /// mudar o filtro sai do modo seleção, igual instinto do usuário espera.
+    private func exitSelectionOnFilterChange() {
+        guard isSelecting else { return }
+        isSelecting = false
+        selectedIDs.removeAll()
     }
 
     var body: some View {
@@ -148,6 +157,7 @@ struct WalletAllView: View {
                 items: items,
                 resultCount: filteredAndSorted.count
             )
+            .onDisappear { exitSelectionOnFilterChange() }
         }
         .fullScreenCover(item: $detailItem) { item in
             CarDetailPageView(item: item, canPublish: true)
@@ -168,11 +178,20 @@ struct WalletAllView: View {
 
     private func deleteSelected() async {
         isDeleting = true
+        exportMessage = nil
         let idsToDelete = selectedIDs
-        try? await SupabaseService.deleteWalletItems(ids: Array(idsToDelete))
-        items.removeAll { idsToDelete.contains($0.id) }
-        selectedIDs.removeAll()
-        isSelecting = false
+        do {
+            try await SupabaseService.deleteWalletItems(ids: Array(idsToDelete))
+            // Só some da tela depois de confirmar que apagou no backend —
+            // antes o try? engolia qualquer erro (rede, RLS) e os itens
+            // sumiam localmente mesmo sem ter apagado nada de verdade,
+            // voltando "do nada" na próxima vez que a wallet recarregasse.
+            items.removeAll { idsToDelete.contains($0.id) }
+            selectedIDs.removeAll()
+            isSelecting = false
+        } catch {
+            exportMessage = "Não foi possível apagar agora. Tente de novo."
+        }
         isDeleting = false
     }
 

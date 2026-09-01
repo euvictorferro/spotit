@@ -27,30 +27,26 @@ struct WalletSummaryView: View {
         ].compactMap { $0 }
     }
 
+    // Marcas fora da CarBrandInfo.table caem no fallback (país "Outro") em
+    // vez de sumir da contagem — sem isso, a Distribuição Geográfica e a
+    // Wallet normal mostravam totais diferentes de carros.
     private var countryBreakdown: [(info: CarBrandInfo, count: Int)] {
         var counts: [String: Int] = [:]
         for item in items {
-            let brand = CarBrandInfo.brand(for: item.modelo)
-            guard CarBrandInfo.table[brand] != nil else { continue }
-            counts[brand, default: 0] += 1
+            counts[CarBrandInfo.brand(for: item.modelo), default: 0] += 1
         }
-        return counts.compactMap { brand, count in
-            CarBrandInfo.table[brand].map { (info: $0, count: count) }
-        }
-        .reduce(into: [String: (CarBrandInfo, Int)]()) { acc, entry in
-            acc[entry.info.country, default: (entry.info, 0)].1 += entry.count
-        }
-        .values
-        .map { (info: $0.0, count: $0.1) }
-        .sorted { $0.count > $1.count }
+        return counts.map { brand, count in (info: CarBrandInfo.info(forBrand: brand), count: count) }
+            .reduce(into: [String: (CarBrandInfo, Int)]()) { acc, entry in
+                acc[entry.info.country, default: (entry.info, 0)].1 += entry.count
+            }
+            .values
+            .map { (info: $0.0, count: $0.1) }
+            .sorted { $0.count > $1.count }
     }
 
     private var sets: [(brand: String, info: CarBrandInfo, items: [WalletItem])] {
         Dictionary(grouping: items) { CarBrandInfo.brand(for: $0.modelo) }
-            .compactMap { brand, items -> (String, CarBrandInfo, [WalletItem])? in
-                guard let info = CarBrandInfo.table[brand] else { return nil }
-                return (brand, info, items)
-            }
+            .map { brand, items in (brand, CarBrandInfo.info(forBrand: brand), items) }
             .sorted { $0.2.count > $1.2.count }
     }
 
@@ -233,8 +229,11 @@ struct SetCard: View {
 
     private var count: Int { items.count }
 
+    // knownModels: 0 = marca fora do catálogo (CarBrandInfo.fallback) — sem
+    // tamanho de referência, mostra a barra sempre cheia em vez de dividir
+    // por zero ou fingir que sabe o "tamanho real" da coleção dessa marca.
     private var progress: Double {
-        min(Double(count) / Double(info.knownModels), 1)
+        info.knownModels > 0 ? min(Double(count) / Double(info.knownModels), 1) : 1
     }
 
     private var mostExpensive: WalletItem? {
@@ -261,7 +260,7 @@ struct SetCard: View {
 
             HStack(alignment: .firstTextBaseline, spacing: 4) {
                 Text("\(count)").font(.system(.title2, design: .rounded, weight: .heavy)).foregroundStyle(Color.accentColor)
-                Text("/ \(info.knownModels) carros").font(.subheadline).foregroundStyle(.secondary)
+                Text(info.knownModels > 0 ? "/ \(info.knownModels) carros" : "carros").font(.subheadline).foregroundStyle(.secondary)
             }
 
             ProgressView(value: progress)

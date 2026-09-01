@@ -87,10 +87,7 @@ struct SearchUsersView: View {
 
     private func row(_ user: SearchableUser) -> some View {
         HStack(spacing: Theme.Spacing.sm) {
-            Circle()
-                .fill(LinearGradient(colors: user.avatarColors, startPoint: .topLeading, endPoint: .bottomTrailing))
-                .frame(width: 44, height: 44)
-                .overlay(Text(user.avatarInitials).font(.caption).fontWeight(.bold).foregroundStyle(.white))
+            AvatarView(user: user, url: user.avatarUrl, size: 44)
 
             Text(user.username).font(.subheadline).fontWeight(.medium)
 

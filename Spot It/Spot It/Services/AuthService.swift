@@ -65,6 +65,13 @@ final class AuthService: ObservableObject {
         try await client.auth.signOut()
     }
 
+    /// Único jeito de recuperar conta pra quem usa email/senha (Sign in with
+    /// Apple não precisa — a Apple já é dona da credencial). Sem isso,
+    /// esquecer a senha travava o usuário fora da conta pra sempre.
+    func resetPassword(email: String) async throws {
+        try await client.auth.resetPasswordForEmail(email)
+    }
+
     /// Exclusão de conta self-service (RPC `delete_user`, migration 0016) —
     /// apaga a linha em auth.users, o que cascateia pra profile/posts/wallet/
     /// follows/DMs/notificações/eventos. Exigido pela App Store (5.1.1v).

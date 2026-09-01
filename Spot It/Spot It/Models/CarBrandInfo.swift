@@ -34,15 +34,27 @@ struct CarBrandInfo {
 
     /// Extrai a marca do nome do modelo (ex: "Ferrari 488 Pista" → "Ferrari").
     /// Marcas de duas palavras (Mercedes-AMG, Aston Martin, Rolls-Royce)
-    /// são checadas primeiro pra não cortar no meio.
+    /// precisam ser checadas antes das de uma palavra — `table.keys` é um
+    /// Dictionary, cuja ordem de iteração NÃO é garantida, então ordena por
+    /// tamanho decrescente pra garantir o prefixo mais longo primeiro.
     static func brand(for modelo: String) -> String {
-        for key in table.keys where modelo.hasPrefix(key) {
+        for key in table.keys.sorted(by: { $0.count > $1.count }) where modelo.hasPrefix(key) {
             return key
         }
         return modelo.components(separatedBy: " ").first ?? modelo
     }
 
-    static func info(for modelo: String) -> CarBrandInfo? {
-        table[brand(for: modelo)]
+    /// Marcas fora da tabela (Bentley, Tesla, Honda, etc.) usam esse
+    /// fallback em vez de sumir silenciosamente das Sets/Distribuição
+    /// Geográfica — `knownModels: 0` sinaliza "tamanho de catálogo
+    /// desconhecido" pra quem exibe o "X / Y carros".
+    static let fallback = CarBrandInfo(country: "Outro", flag: "🏳️", coordinate: .init(latitude: 0, longitude: 0), knownModels: 0)
+
+    static func info(forBrand brand: String) -> CarBrandInfo {
+        table[brand] ?? fallback
+    }
+
+    static func info(for modelo: String) -> CarBrandInfo {
+        info(forBrand: brand(for: modelo))
     }
 }

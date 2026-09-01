@@ -508,14 +508,15 @@ struct SupabaseService {
         struct ProfileRow: Decodable {
             let id: UUID
             let username: String
+            let avatar_url: String?
         }
         let rows: [ProfileRow] = try await client.from("profiles")
-            .select("id, username")
+            .select("id, username, avatar_url")
             .ilike("username", pattern: "%\(username)%")
             .limit(20)
             .execute()
             .value
-        return rows.map { SearchableUser(id: $0.id, username: $0.username) }
+        return rows.map { SearchableUser(id: $0.id, username: $0.username, avatarUrl: $0.avatar_url) }
     }
 
     static func follow(userId: UUID) async throws {

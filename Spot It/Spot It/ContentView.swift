@@ -27,6 +27,12 @@ struct ContentView: View {
                 mainTabs
             }
         }
+        // Sem isso, sair do app com o "+" escondido (ex.: dentro de uma
+        // conversa de DM) deixava ele escondido pra sempre na próxima
+        // sessão/login, mesmo pra um usuário diferente.
+        .onChange(of: authService.session == nil) { _, isSignedOut in
+            if isSignedOut { captureButtonVisibility.isHidden = false }
+        }
     }
 
     private var mainTabs: some View {

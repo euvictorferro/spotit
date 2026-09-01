@@ -15,6 +15,7 @@ struct AuthView: View {
     @State private var errorMessage: String?
     @State private var isLoading = false
     @State private var currentNonce: String?
+    @State private var showForgotPassword = false
 
     var body: some View {
         ScrollView {
@@ -62,6 +63,13 @@ struct AuthView: View {
                 .controlSize(.large)
                 .disabled(email.isEmpty || password.isEmpty || isLoading)
 
+                if !isSignUp {
+                    Button("Esqueci minha senha") { showForgotPassword = true }
+                        .font(.footnote)
+                        .foregroundStyle(.white.opacity(0.7))
+                        .frame(maxWidth: .infinity)
+                }
+
                 HStack {
                     Rectangle().fill(.white.opacity(0.15)).frame(height: 1)
                     Text("OU")
@@ -98,6 +106,9 @@ struct AuthView: View {
         }
         .toolbarBackground(.hidden, for: .navigationBar)
         .navigationBarBackButtonHidden(true)
+        .sheet(isPresented: $showForgotPassword) {
+            ForgotPasswordSheet(prefillEmail: email)
+        }
     }
 
     private func fieldLabel(_ text: String) -> some View {
@@ -117,7 +128,7 @@ struct AuthView: View {
                 try await authService.signIn(email: email, password: password)
             }
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = friendlyAuthError(error)
         }
     }
 
@@ -141,9 +152,95 @@ struct AuthView: View {
             do {
                 try await authService.signInWithApple(idToken: idToken, nonce: nonce)
             } catch {
-                errorMessage = error.localizedDescription
+                errorMessage = friendlyAuthError(error)
             }
         }
+    }
+}
+
+/// Traduz as mensagens mais comuns do Supabase Auth (em inglês, cruas) pra
+/// PT-BR — sem isso o usuário via literalmente "Invalid login credentials"
+/// no meio de um app todo em português.
+private func friendlyAuthError(_ error: Error) -> String {
+    let raw = error.localizedDescription
+    if raw.contains("Invalid login credentials") {
+        return "Email ou senha incorretos."
+    }
+    if raw.contains("User already registered") {
+        return "Já existe uma conta com esse email."
+    }
+    if raw.contains("Password should be at least") {
+        return "A senha precisa ter pelo menos 6 caracteres."
+    }
+    if raw.contains("Unable to validate email address") || raw.contains("invalid format") {
+        return "Esse email não parece válido."
+    }
+    if raw.contains("Email not confirmed") {
+        return "Confirme seu email antes de entrar (verifique sua caixa de entrada)."
+    }
+    return raw
+}
+
+/// Sheet de "esqueci minha senha" — dispara o email de recuperação do
+/// Supabase Auth. Sem isso, quem usa login por email/senha (não Apple)
+/// ficava travado fora da conta pra sempre se esquecesse a senha.
+private struct ForgotPasswordSheet: View {
+    @EnvironmentObject private var authService: AuthService
+    @Environment(\.dismiss) private var dismiss
+    @State private var email: String
+    @State private var isSending = false
+    @State private var errorMessage: String?
+    @State private var didSend = false
+
+    init(prefillEmail: String) {
+        _email = State(initialValue: prefillEmail)
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    TextField("seu@email.com", text: $email)
+                        .textContentType(.emailAddress)
+                        .keyboardType(.emailAddress)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                } footer: {
+                    Text("Vamos mandar um link pra você redefinir sua senha.")
+                }
+                if let errorMessage {
+                    Text(errorMessage).foregroundStyle(.red)
+                }
+            }
+            .navigationTitle("Recuperar senha")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancelar") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Enviar") { Task { await send() } }
+                        .disabled(email.trimmingCharacters(in: .whitespaces).isEmpty || isSending)
+                }
+            }
+            .alert("Email enviado", isPresented: $didSend) {
+                Button("OK") { dismiss() }
+            } message: {
+                Text("Se existir uma conta com esse email, você vai receber um link de recuperação em instantes.")
+            }
+        }
+    }
+
+    private func send() async {
+        isSending = true
+        errorMessage = nil
+        do {
+            try await authService.resetPassword(email: email.trimmingCharacters(in: .whitespaces))
+            didSend = true
+        } catch {
+            errorMessage = friendlyAuthError(error)
+        }
+        isSending = false
     }
 }
 
