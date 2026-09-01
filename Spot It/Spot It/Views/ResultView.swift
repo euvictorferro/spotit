@@ -17,6 +17,7 @@ struct ResultView: View {
     // enrichment em background termina.
     @State var carInfo: CarInfo
     @State private var isEnriching = true
+    @State private var enrichTask: Task<Void, Never>?
     @State private var isSaving = false
     @State private var saveError: String?
     @State private var valueFeedback: Bool?
@@ -104,7 +105,15 @@ struct ResultView: View {
                         .disabled(isSaving)
                 }
             }
-            .task { await enrich() }
+            .onAppear {
+                // Task guardada (não .task{}) de propósito — save() precisa
+                // conseguir esperar essa mesma chamada terminar antes de
+                // gravar, senão salvava só os 7 campos rápidos pra sempre
+                // se o usuário tocasse "Salvar" antes do enrichment chegar.
+                if enrichTask == nil {
+                    enrichTask = Task { await enrich() }
+                }
+            }
         }
     }
 
@@ -316,12 +325,22 @@ struct ResultView: View {
     }
 
     private func save() async {
+        guard let image else { return }
+        isSaving = true
+        saveError = nil
+
+        // Garante que salva o perfil completo, não só os 7 campos rápidos —
+        // se o usuário tocar "Salvar" antes do enrichment em background
+        // terminar, espera aqui (o botão já mostra "Salvando...").
+        await enrichTask?.value
+
         // Mesma compressão do scan (resizedForUpload + cap) — a imagem
         // original em resolução total (12MP+) deixava o upload lento e mais
         // propenso a falhar em rede ruim.
-        guard let image, let data = image.resizedForUpload(maxDimension: 1600).jpegDataCapped(maxBytes: 900_000) else { return }
-        isSaving = true
-        saveError = nil
+        guard let data = image.resizedForUpload(maxDimension: 1600).jpegDataCapped(maxBytes: 900_000) else {
+            isSaving = false
+            return
+        }
         let coordinate = await LocationService.shared.currentLocation()
         do {
             let url = try await SupabaseService.uploadPhoto(imageData: data)

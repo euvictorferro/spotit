@@ -296,9 +296,13 @@ extension UIImage {
 final class CameraModel: NSObject, ObservableObject {
     let session = AVCaptureSession()
     private let output = AVCapturePhotoOutput()
+    private var device: AVCaptureDevice?
     private var isConfigured = false
     private var isFlashOn = false
     var onCapture: ((UIImage) -> Void)?
+    /// Maior zoom que o hardware aceita sem esticar demais a imagem —
+    /// AVCaptureDevice permite bem mais que isso, mas fica inutilizável.
+    var maxZoomFactor: CGFloat { min(device?.activeFormat.videoMaxZoomFactor ?? 1, 8) }
 
     func configureIfNeeded() {
         guard !isConfigured else { return }
@@ -323,7 +327,18 @@ final class CameraModel: NSObject, ObservableObject {
         session.addInput(input)
         if session.canAddOutput(output) { session.addOutput(output) }
         session.commitConfiguration()
+        self.device = device
         start()
+    }
+
+    /// Zoom absoluto (1x = sem zoom) — chamado pelo pinch-to-zoom no
+    /// preview, sempre travado entre 1x e `maxZoomFactor`.
+    func setZoom(_ factor: CGFloat) {
+        guard let device else { return }
+        let clamped = min(max(factor, 1), maxZoomFactor)
+        try? device.lockForConfiguration()
+        device.videoZoomFactor = clamped
+        device.unlockForConfiguration()
     }
 
     func start() {
@@ -388,6 +403,10 @@ struct CameraPicker: View {
 
     @StateObject private var camera = CameraModel()
     @State private var isFlashOn = false
+    @State private var committedZoom: CGFloat = 1
+    @GestureState private var pinchDelta: CGFloat = 1
+
+    private var currentZoom: CGFloat { committedZoom * pinchDelta }
 
     var body: some View {
         ZStack {
@@ -407,10 +426,21 @@ struct CameraPicker: View {
                 thumbnails: thumbnails,
                 maxPhotos: maxPhotos,
                 onIdentify: onIdentify,
-                onReset: onReset
+                onReset: onReset,
+                zoomFactor: currentZoom
             )
             .zIndex(1)
         }
+        // Pinch-to-zoom padrão do iOS — na tela toda pra não competir com
+        // os botões (é um gesto de 2 dedos, eles usam 1).
+        .gesture(
+            MagnificationGesture()
+                .updating($pinchDelta) { value, state, _ in state = value }
+                .onEnded { value in
+                    committedZoom = min(max(committedZoom * value, 1), camera.maxZoomFactor)
+                }
+        )
+        .onChange(of: currentZoom) { _, newValue in camera.setZoom(newValue) }
         .onAppear {
             camera.onCapture = onCapture
             camera.configureIfNeeded()
@@ -431,6 +461,7 @@ private struct CameraOverlayView: View {
     let maxPhotos: Int
     let onIdentify: (() -> Void)?
     let onReset: (() -> Void)?
+    var zoomFactor: CGFloat = 1
     @State private var isFlashOn = false
 
     var body: some View {
@@ -439,6 +470,15 @@ private struct CameraOverlayView: View {
                 HStack {
                     iconButton("xmark", action: onDismiss)
                     Spacer()
+                    if zoomFactor > 1.05 {
+                        Text(String(format: "%.1fx", zoomFactor))
+                            .font(.caption).fontWeight(.semibold)
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, Theme.Spacing.sm)
+                            .padding(.vertical, 6)
+                            .background(.black.opacity(0.35), in: Capsule())
+                        Spacer()
+                    }
                     iconButton(isFlashOn ? "bolt.fill" : "bolt.slash.fill") {
                         isFlashOn.toggle()
                         onToggleFlash(isFlashOn)
