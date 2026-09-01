@@ -21,7 +21,7 @@ struct SearchUsersView: View {
                 searchField
 
                 if let errorMessage {
-                    EmptyStateView(icon: "exclamationmark.triangle", message: errorMessage)
+                    EmptyStateView(icon: "exclamationmark.triangle", message: LocalizedStringKey(errorMessage))
                 } else if search.isEmpty {
                     EmptyStateView(icon: "person.crop.circle.badge.questionmark", message: "Digite um username pra buscar.")
                 } else if results.isEmpty && !isLoading {

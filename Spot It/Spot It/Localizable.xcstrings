@@ -1,0 +1,1623 @@
+{
+  "sourceLanguage": "pt-BR",
+  "strings": {
+    "+ Adicionar ângulo": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "+ Add angle"
+          }
+        }
+      }
+    },
+    "Adicionar ao Calendário": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add to Calendar"
+          }
+        }
+      }
+    },
+    "Adicionar localização": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add location"
+          }
+        }
+      }
+    },
+    "Algum feedback?": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Any feedback?"
+          }
+        }
+      }
+    },
+    "Ano do Carro": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Car Year"
+          }
+        }
+      }
+    },
+    "Análise": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Analysis"
+          }
+        }
+      }
+    },
+    "Análise de Raridade": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rarity Analysis"
+          }
+        }
+      }
+    },
+    "Apaga permanentemente seu perfil, carros salvos, posts, curtidas, comentários, seguidores, mensagens e presenças em eventos. Não dá pra desfazer.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Permanently deletes your profile, saved cars, posts, likes, comments, followers, messages and event RSVPs. This can't be undone."
+          }
+        }
+      }
+    },
+    "Bio": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bio"
+          }
+        }
+      }
+    },
+    "Bloquear": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Block"
+          }
+        }
+      }
+    },
+    "Buscar": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search"
+          }
+        }
+      }
+    },
+    "Buscar usuários": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search users"
+          }
+        }
+      }
+    },
+    "Cancelar": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancel"
+          }
+        }
+      }
+    },
+    "Características Físicas": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Physical Characteristics"
+          }
+        }
+      }
+    },
+    "Carregando mais detalhes...": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Loading more details..."
+          }
+        }
+      }
+    },
+    "Cidade": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "City"
+          }
+        }
+      }
+    },
+    "Coleção geolocalizada": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geolocated collection"
+          }
+        }
+      }
+    },
+    "Comentários": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comments"
+          }
+        }
+      }
+    },
+    "Compartilhar perfil": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Share profile"
+          }
+        }
+      }
+    },
+    "Comum": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Common"
+          }
+        }
+      }
+    },
+    "Configurações": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Settings"
+          }
+        }
+      }
+    },
+    "Conta a história desse flagra...": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tell the story of this find..."
+          }
+        }
+      }
+    },
+    "Conta mais sobre o evento...": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tell us more about the event..."
+          }
+        }
+      }
+    },
+    "Continuar": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Continue"
+          }
+        }
+      }
+    },
+    "Cria seu perfil": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create your profile"
+          }
+        }
+      }
+    },
+    "Criar": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create"
+          }
+        }
+      }
+    },
+    "Criar conta": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create account"
+          }
+        }
+      }
+    },
+    "Data": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Date"
+          }
+        }
+      }
+    },
+    "Denunciar": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Report"
+          }
+        }
+      }
+    },
+    "Denunciar Perfil": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Report Profile"
+          }
+        }
+      }
+    },
+    "Denunciar Post": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Report Post"
+          }
+        }
+      }
+    },
+    "Denúncia enviada": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Report sent"
+          }
+        }
+      }
+    },
+    "Descreva o problema": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Describe the issue"
+          }
+        }
+      }
+    },
+    "Descrição (opcional)": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Description (optional)"
+          }
+        }
+      }
+    },
+    "Design": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Design"
+          }
+        }
+      }
+    },
+    "Design do Carro": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Car Design"
+          }
+        }
+      }
+    },
+    "Detalhes": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Details"
+          }
+        }
+      }
+    },
+    "Digite um username pra buscar.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Type a username to search."
+          }
+        }
+      }
+    },
+    "Distribuição Geográfica": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geographic Distribution"
+          }
+        }
+      }
+    },
+    "Editar perfil": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit profile"
+          }
+        }
+      }
+    },
+    "Email": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Email"
+          }
+        }
+      }
+    },
+    "Email enviado": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Email sent"
+          }
+        }
+      }
+    },
+    "Encontrou o que procurava?": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Did you find what you were looking for?"
+          }
+        }
+      }
+    },
+    "Entrar": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sign In"
+          }
+        }
+      }
+    },
+    "Enviar": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Send"
+          }
+        }
+      }
+    },
+    "Escreva uma legenda...": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Write a caption..."
+          }
+        }
+      }
+    },
+    "Esqueci minha senha": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Forgot my password"
+          }
+        }
+      }
+    },
+    "Essa ação não pode ser desfeita.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This action can't be undone."
+          }
+        }
+      }
+    },
+    "Essa informação foi relevante?": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Was this information relevant?"
+          }
+        }
+      }
+    },
+    "Essa informação foi útil?": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Was this information helpful?"
+          }
+        }
+      }
+    },
+    "Essas fotos não estarão salvas e você não conseguirá recuperar depois.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "These photos won't be saved and you won't be able to recover them later."
+          }
+        }
+      }
+    },
+    "Esse valor te parece razoável?": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Does this value seem reasonable?"
+          }
+        }
+      }
+    },
+    "Eventos": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Events"
+          }
+        }
+      }
+    },
+    "Ex: Cars & Coffee Naples": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ex: Cars & Coffee Naples"
+          }
+        }
+      }
+    },
+    "Ex: Naples, FL": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ex: Naples, FL"
+          }
+        }
+      }
+    },
+    "Excluir Conta": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete Account"
+          }
+        }
+      }
+    },
+    "Excluir sua conta permanentemente?": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Permanently delete your account?"
+          }
+        }
+      }
+    },
+    "Exterior": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exterior"
+          }
+        }
+      }
+    },
+    "Fechar": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Close"
+          }
+        }
+      }
+    },
+    "Filter": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Filter"
+          }
+        }
+      }
+    },
+    "Filtro": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Filter"
+          }
+        }
+      }
+    },
+    "Fique por dentro": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stay in the loop"
+          }
+        }
+      }
+    },
+    "Identificando o carro...": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Identifying the car..."
+          }
+        }
+      }
+    },
+    "Interior": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Interior"
+          }
+        }
+      }
+    },
+    "Legal": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Legal"
+          }
+        }
+      }
+    },
+    "Legenda": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Caption"
+          }
+        }
+      }
+    },
+    "Legenda (opcional)": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Caption (optional)"
+          }
+        }
+      }
+    },
+    "Lendário": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Legendary"
+          }
+        }
+      }
+    },
+    "Limpar Tudo": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear All"
+          }
+        }
+      }
+    },
+    "Local": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Location"
+          }
+        }
+      }
+    },
+    "Localização": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Location"
+          }
+        }
+      }
+    },
+    "Mapa": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Map"
+          }
+        }
+      }
+    },
+    "Marca": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Brand"
+          }
+        }
+      }
+    },
+    "Marcar pessoas": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tag people"
+          }
+        }
+      }
+    },
+    "Mensagem": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Message"
+          }
+        }
+      }
+    },
+    "Mensagem...": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Message..."
+          }
+        }
+      }
+    },
+    "Mercado e Valorização": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Market & Value Growth"
+          }
+        }
+      }
+    },
+    "Motivo": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reason"
+          }
+        }
+      }
+    },
+    "Nenhum evento por perto ainda.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No events nearby yet."
+          }
+        }
+      }
+    },
+    "Nenhum local registrado ainda.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No locations logged yet."
+          }
+        }
+      }
+    },
+    "Nenhum post ainda. Siga outros spotters pra ver o feed.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No posts yet. Follow other spotters to see the feed."
+          }
+        }
+      }
+    },
+    "Nenhuma mensagem ainda. Suas conversas aparecem aqui.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No messages yet. Your conversations show up here."
+          }
+        }
+      }
+    },
+    "Ninguém encontrado.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No one found."
+          }
+        }
+      }
+    },
+    "Nome": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Name"
+          }
+        }
+      }
+    },
+    "Nome (opcional)": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Name (optional)"
+          }
+        }
+      }
+    },
+    "Notificações": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notifications"
+          }
+        }
+      }
+    },
+    "Nova publicação": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New post"
+          }
+        }
+      }
+    },
+    "Novo Evento": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New Event"
+          }
+        }
+      }
+    },
+    "Não conseguimos identificar esse carro.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "We couldn't identify this car."
+          }
+        }
+      }
+    },
+    "Não deu pra carregar o feed agora. Puxe pra atualizar.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't load the feed right now. Pull to refresh."
+          }
+        }
+      }
+    },
+    "Não deu pra carregar os comentários. Puxe a lista pra tentar de novo.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't load the comments. Pull the list to try again."
+          }
+        }
+      }
+    },
+    "Não deu pra carregar os eventos agora. Puxe pra atualizar.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't load events right now. Pull to refresh."
+          }
+        }
+      }
+    },
+    "Não deu pra carregar sua Wallet agora. Puxe pra atualizar.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't load your Wallet right now. Pull to refresh."
+          }
+        }
+      }
+    },
+    "Não foi possível salvar": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't save"
+          }
+        }
+      }
+    },
+    "OK": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
+          }
+        }
+      }
+    },
+    "OU": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OR"
+          }
+        }
+      }
+    },
+    "Ops": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oops"
+          }
+        }
+      }
+    },
+    "País": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Country"
+          }
+        }
+      }
+    },
+    "Preço": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Price"
+          }
+        }
+      }
+    },
+    "Pronto": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Done"
+          }
+        }
+      }
+    },
+    "Publicar": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Publish"
+          }
+        }
+      }
+    },
+    "Publicar no Feed": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Publish to Feed"
+          }
+        }
+      }
+    },
+    "Ranking": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ranking"
+          }
+        }
+      }
+    },
+    "Ranking ainda não está disponível.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ranking isn't available yet."
+          }
+        }
+      }
+    },
+    "Raridade": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rarity"
+          }
+        }
+      }
+    },
+    "Rascunho": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Draft"
+          }
+        }
+      }
+    },
+    "Recomeçar": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start Over"
+          }
+        }
+      }
+    },
+    "Reconhecimento por IA": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI Recognition"
+          }
+        }
+      }
+    },
+    "Recuperar senha": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recover password"
+          }
+        }
+      }
+    },
+    "Registre e colecione os carros que você avista": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Log and collect the cars you spot"
+          }
+        }
+      }
+    },
+    "Responder": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reply"
+          }
+        }
+      }
+    },
+    "Sair": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sign Out"
+          }
+        }
+      }
+    },
+    "Sair da conta?": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sign out?"
+          }
+        }
+      }
+    },
+    "Salvar": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save"
+          }
+        }
+      }
+    },
+    "Se existir uma conta com esse email, você vai receber um link de recuperação em instantes.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "If an account exists with that email, you'll receive a recovery link shortly."
+          }
+        }
+      }
+    },
+    "Segue você": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Follows you"
+          }
+        }
+      }
+    },
+    "Seguir": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Follow"
+          }
+        }
+      }
+    },
+    "Selecionar Tudo": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select All"
+          }
+        }
+      }
+    },
+    "Senha": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Password"
+          }
+        }
+      }
+    },
+    "Set": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Set"
+          }
+        }
+      }
+    },
+    "Seu Carro": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your Car"
+          }
+        }
+      }
+    },
+    "Seus Melhores Carros": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your Best Cars"
+          }
+        }
+      }
+    },
+    "Siga o Spot It no Instagram pra ver os carros mais raros da comunidade.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Follow Spot It on Instagram to see the rarest cars in the community."
+          }
+        }
+      }
+    },
+    "Sort": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sort"
+          }
+        }
+      }
+    },
+    "Spot It": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spot It"
+          }
+        }
+      }
+    },
+    "Spotted": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spotted"
+          }
+        }
+      }
+    },
+    "Sua Wallet está vazia. Tira uma foto de um carro raro pra começar sua coleção.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your Wallet is empty. Take a photo of a rare car to start your collection."
+          }
+        }
+      }
+    },
+    "Sua foto": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your photo"
+          }
+        }
+      }
+    },
+    "Suas Coleções Oficiais": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your Official Collections"
+          }
+        }
+      }
+    },
+    "Sugestões para seguir de volta": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suggestions to follow back"
+          }
+        }
+      }
+    },
+    "Série": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Series"
+          }
+        }
+      }
+    },
+    "Tire uma foto e identificamos o carro": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Take a photo and we'll identify the car"
+          }
+        }
+      }
+    },
+    "Unidades vendidas": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Units sold"
+          }
+        }
+      }
+    },
+    "Username": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Username"
+          }
+        }
+      }
+    },
+    "Username precisa ter 3-20 caracteres, sem espaço.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Username must be 3-20 characters, no spaces."
+          }
+        }
+      }
+    },
+    "Usuário": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "User"
+          }
+        }
+      }
+    },
+    "Valor da Coleção (USD)": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Collection Value (USD)"
+          }
+        }
+      }
+    },
+    "Valorização": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Value Growth"
+          }
+        }
+      }
+    },
+    "Vamos mandar um link pra você redefinir sua senha.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "We'll send you a link to reset your password."
+          }
+        }
+      }
+    },
+    "Vamos revisar em até 24h.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "We'll review it within 24h."
+          }
+        }
+      }
+    },
+    "Variante Especial": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Special Variant"
+          }
+        }
+      }
+    },
+    "Variante Mais Rara": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rarest Variant"
+          }
+        }
+      }
+    },
+    "Veja onde você já flagrou cada modelo": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "See where you've spotted each model"
+          }
+        }
+      }
+    },
+    "Ver Todos": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "See All"
+          }
+        }
+      }
+    },
+    "Você ainda não publicou nada. Toque no \"+\" no Feed pra postar.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You haven't posted anything yet. Tap \"+\" in the Feed to post."
+          }
+        }
+      }
+    },
+    "Vocês não vão mais ver posts, comentários nem mensagens um do outro.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You'll no longer see each other's posts, comments, or messages."
+          }
+        }
+      }
+    },
+    "seu@email.com": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "you@email.com"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

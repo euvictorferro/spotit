@@ -178,7 +178,7 @@ struct ResultView: View {
 
     // MARK: - Paragraph sections
 
-    private func paragraphSection(title: String, text: String) -> some View {
+    private func paragraphSection(title: LocalizedStringKey, text: String) -> some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
             Text(title).font(.headline)
             Text(text).font(.subheadline).foregroundStyle(.secondary)

@@ -518,7 +518,7 @@ private enum LegalText {
 }
 
 private struct LegalTextView: View {
-    let title: String
+    let title: LocalizedStringKey
     let text: String
 
     var body: some View {

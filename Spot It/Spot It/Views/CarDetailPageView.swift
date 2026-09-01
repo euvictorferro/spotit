@@ -235,7 +235,7 @@ struct CarDetailPageView: View {
         )
     }
 
-    private func paragraphSection(title: String, text: String) -> some View {
+    private func paragraphSection(title: LocalizedStringKey, text: String) -> some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
             Text(title).font(.walletHeadline)
             Text(text).font(.subheadline).foregroundStyle(.secondary)

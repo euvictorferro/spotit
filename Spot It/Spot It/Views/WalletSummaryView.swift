@@ -71,7 +71,7 @@ struct WalletSummaryView: View {
         }
     }
 
-    private func sectionHeader(_ title: String) -> some View {
+    private func sectionHeader(_ title: LocalizedStringKey) -> some View {
         HStack {
             Text(title).font(.walletHeadline)
             Spacer()

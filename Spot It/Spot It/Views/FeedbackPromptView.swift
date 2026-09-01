@@ -3,7 +3,7 @@ import SwiftUI
 /// "Essa informação foi útil?" com dois botões (👍/👎) — usado na tela de
 /// Resultado da captura e na página de detalhe do carro salvo.
 struct FeedbackPromptView: View {
-    let question: String
+    let question: LocalizedStringKey
     @Binding var answer: Bool?
 
     var body: some View {

@@ -64,7 +64,7 @@ struct WelcomeView: View {
         }
     }
 
-    private func highlight(icon: String, title: String, subtitle: String) -> some View {
+    private func highlight(icon: String, title: LocalizedStringKey, subtitle: LocalizedStringKey) -> some View {
         HStack(spacing: Theme.Spacing.sm) {
             Image(systemName: icon)
                 .font(.title3)
