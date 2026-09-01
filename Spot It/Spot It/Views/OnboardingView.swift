@@ -67,7 +67,7 @@ struct OnboardingView: View {
                         Task { await submit() }
                     } label: {
                         if isLoading {
-                            ProgressView()
+                            WheelLoadingView(size: 22)
                         } else {
                             Text("Continuar").frame(maxWidth: .infinity)
                         }

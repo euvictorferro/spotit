@@ -61,7 +61,7 @@ struct WalletView: View {
             .refreshable { await load() }
             .overlay {
                 if isLoading && items.isEmpty {
-                    ProgressView()
+                    WheelLoadingView(size: 44)
                 }
             }
         }

@@ -51,7 +51,7 @@ struct AuthView: View {
                     Task { await submit() }
                 } label: {
                     if isLoading {
-                        ProgressView()
+                        WheelLoadingView(size: 22)
                             .frame(maxWidth: .infinity)
                     } else {
                         Text(isSignUp ? "Criar conta" : "Entrar")

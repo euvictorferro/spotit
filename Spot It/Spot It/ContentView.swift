@@ -17,7 +17,7 @@ struct ContentView: View {
             if !authService.isReady {
                 ZStack {
                     AppGradientBackground()
-                    ProgressView()
+                    WheelLoadingView(size: 56)
                 }
             } else if authService.session == nil {
                 WelcomeView()

@@ -8,6 +8,7 @@ struct WelcomeView: View {
         NavigationStack {
             VStack(spacing: Theme.Spacing.lg) {
                 Spacer()
+                Spacer()
 
                 VStack(spacing: Theme.Spacing.sm) {
                     Text("Spotted")
@@ -48,6 +49,18 @@ struct WelcomeView: View {
             }
             .padding(Theme.Spacing.lg)
             .background(AppGradientBackground())
+            .background(alignment: .top) {
+                // Mesmo enfeite decorativo do header da Wallet — roda em
+                // wireframe quase transparente, sangrando pelo topo da tela.
+                Image("LoadingWheel")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 340, height: 340)
+                    .opacity(0.16)
+                    .offset(y: -120)
+                    .allowsHitTesting(false)
+            }
+            .clipped()
         }
     }
 
