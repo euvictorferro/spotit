@@ -33,16 +33,29 @@ final class LocationService: NSObject, CLLocationManagerDelegate {
         return await withCheckedContinuation { continuation in
             self.continuation = continuation
             manager.requestLocation()
+            // Sem isso, sinal de GPS fraco (dentro de casa, prédio) travava
+            // o save inteiro pra sempre — requestLocation não tem timeout
+            // próprio, e o "Fechar" fica desabilitado enquanto isSaving.
+            Task {
+                try? await Task.sleep(nanoseconds: 5_000_000_000)
+                self.resumeIfNeeded(with: nil)
+            }
         }
     }
 
+    /// Garante que a continuation só é resolvida uma vez — location de
+    /// verdade e o timeout podem chegar em qualquer ordem, o primeiro ganha.
+    private func resumeIfNeeded(with coordinate: CLLocationCoordinate2D?) {
+        guard let continuation else { return }
+        self.continuation = nil
+        continuation.resume(returning: coordinate)
+    }
+
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        continuation?.resume(returning: locations.last?.coordinate)
-        continuation = nil
+        resumeIfNeeded(with: locations.last?.coordinate)
     }
 
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
-        continuation?.resume(returning: nil)
-        continuation = nil
+        resumeIfNeeded(with: nil)
     }
 }
