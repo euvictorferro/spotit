@@ -1,5 +1,6 @@
 import CoreLocation
 import SwiftUI
+import UIKit
 
 struct ResultView: View {
     let image: UIImage?
@@ -291,33 +292,57 @@ struct ResultView: View {
     // MARK: - Bottom bar
 
     private var bottomBar: some View {
-        HStack(spacing: Theme.Spacing.md) {
-            Button {
-                dismiss()
-            } label: {
-                Image(systemName: "camera")
-                    .frame(width: 44, height: 44)
+        VStack(spacing: Theme.Spacing.sm) {
+            if isLocationDenied {
+                Button {
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        UIApplication.shared.open(url)
+                    }
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "location.slash")
+                        Text("Localização desativada — esse carro não vai aparecer no mapa. Toque pra ativar em Ajustes.")
+                            .font(.caption)
+                            .multilineTextAlignment(.leading)
+                    }
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
             }
-            .buttonStyle(.bordered)
 
-            ShareLink(item: shareText) {
-                Image(systemName: "square.and.arrow.up")
-                    .frame(width: 44, height: 44)
-            }
-            .buttonStyle(.bordered)
+            HStack(spacing: Theme.Spacing.md) {
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "camera")
+                        .frame(width: 44, height: 44)
+                }
+                .buttonStyle(.bordered)
 
-            Button {
-                Task { await save() }
-            } label: {
-                Text(isSaving ? "Salvando..." : "Salvar na Wallet")
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, Theme.Spacing.sm)
+                ShareLink(item: shareText) {
+                    Image(systemName: "square.and.arrow.up")
+                        .frame(width: 44, height: 44)
+                }
+                .buttonStyle(.bordered)
+
+                Button {
+                    Task { await save() }
+                } label: {
+                    Text(isSaving ? "Salvando..." : "Salvar na Wallet")
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, Theme.Spacing.sm)
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(isSaving)
             }
-            .buttonStyle(.borderedProminent)
-            .disabled(isSaving)
         }
         .padding(Theme.Spacing.md)
         .background(.bar)
+    }
+
+    private var isLocationDenied: Bool {
+        let status = LocationService.shared.authorizationStatus
+        return status == .denied || status == .restricted
     }
 
     private var shareText: String {

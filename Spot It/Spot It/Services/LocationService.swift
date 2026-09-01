@@ -15,6 +15,18 @@ final class LocationService: NSObject, CLLocationManagerDelegate {
         manager.delegate = self
     }
 
+    var authorizationStatus: CLAuthorizationStatus { manager.authorizationStatus }
+
+    /// Pede a permissão cedo (ex.: ao abrir a câmera), não só escondido
+    /// dentro do save — assim o alerta do sistema aparece num momento em
+    /// que o usuário está de olho na tela, em vez de eventualmente sumir
+    /// sem resposta e deixar o status preso em "ainda não decidido" pra
+    /// sempre (o que fazia todo save ficar sem localização).
+    func requestPermissionIfNeeded() {
+        guard manager.authorizationStatus == .notDetermined else { return }
+        manager.requestWhenInUseAuthorization()
+    }
+
     func currentLocation() async -> CLLocationCoordinate2D? {
         switch manager.authorizationStatus {
         case .denied, .restricted:

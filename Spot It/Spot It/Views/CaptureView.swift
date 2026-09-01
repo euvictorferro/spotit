@@ -40,6 +40,10 @@ struct CaptureView: View {
             ResultView(carInfo: info, image: capturedImages.first, imagesDataForEnrich: lastIdentifyDatas, onFinish: { dismiss() })
         }
         .preferredColorScheme(.dark)
+        // Pede localização aqui (não só escondido no save) — o alerta do
+        // sistema aparece com o usuário de olho na câmera, em vez de nunca
+        // ser respondido e deixar todo save sem localização pra sempre.
+        .onAppear { LocationService.shared.requestPermissionIfNeeded() }
     }
 
     private var cameraView: some View {
