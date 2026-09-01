@@ -7,6 +7,7 @@ struct FeedView: View {
 
     @State private var posts: [DBPost] = []
     @State private var loadFailed = false
+    @State private var unreadNotifications = 0
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -42,12 +43,25 @@ struct FeedView: View {
                     }
                     NavigationLink(destination: NotificationsView()) {
                         Image(systemName: "bell")
+                            .overlay(alignment: .topTrailing) {
+                                if unreadNotifications > 0 {
+                                    Circle()
+                                        .fill(.red)
+                                        .frame(width: 8, height: 8)
+                                        .offset(x: 4, y: -2)
+                                }
+                            }
                     }
                 }
             }
             .toolbarBackground(.hidden, for: .navigationBar)
             .onAppear { Task { await load() } }
             .refreshable { await load() }
+            // O sino não some sozinho — volta da tela de notificações
+            // (que marca como lida) precisa recontar o badge.
+            .onChange(of: path) { _, newPath in
+                if newPath.isEmpty { Task { await loadUnreadCount() } }
+            }
         }
         .preferredColorScheme(.dark)
         .onDisappear { path = NavigationPath() }
@@ -60,6 +74,11 @@ struct FeedView: View {
         } catch {
             loadFailed = true
         }
+        await loadUnreadCount()
+    }
+
+    private func loadUnreadCount() async {
+        unreadNotifications = (try? await SupabaseService.fetchUnreadNotificationCount()) ?? 0
     }
 }
 

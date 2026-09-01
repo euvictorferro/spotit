@@ -100,22 +100,29 @@ final class AuthService: ObservableObject {
         await reloadProfile()
     }
 
-    func updateProfile(displayName: String?, bio: String?, avatarData: Data?) async throws {
+    /// `username` era editável na tela (EditProfileSheet) mas nunca era
+    /// enviado pro backend — a UI mostrava a troca, mas revertia sozinha no
+    /// próximo reloadProfile() porque nada tinha sido salvo de verdade.
+    func updateProfile(username: String?, displayName: String?, bio: String?, avatarData: Data?) async throws {
         guard let userId = session?.user.id else { throw SupabaseError.notSignedIn }
 
-        // ponytail: only avatar_url is conditionally included — displayName/bio empty-string-clears
+        // ponytail: only avatar_url/username are conditionally included — displayName/bio empty-string-clears
         // semantics were already the existing behavior, not something this fix needs to change.
         struct ProfileUpdate: Encodable {
+            let username: String?
             let display_name: String?
             let bio: String?
             let avatar_url: String?
 
             enum CodingKeys: String, CodingKey {
-                case display_name, bio, avatar_url
+                case username, display_name, bio, avatar_url
             }
 
             func encode(to encoder: Encoder) throws {
                 var container = encoder.container(keyedBy: CodingKeys.self)
+                if let username {
+                    try container.encode(username, forKey: .username)
+                }
                 try container.encode(display_name, forKey: .display_name)
                 try container.encode(bio, forKey: .bio)
                 if let avatar_url {
@@ -129,10 +136,17 @@ final class AuthService: ObservableObject {
             avatarUrl = try await uploadAvatarIfNeeded(avatarData)
         }
 
-        try await client.from("profiles")
-            .update(ProfileUpdate(display_name: displayName, bio: bio, avatar_url: avatarUrl))
-            .eq("id", value: userId)
-            .execute()
+        do {
+            try await client.from("profiles")
+                .update(ProfileUpdate(username: username, display_name: displayName, bio: bio, avatar_url: avatarUrl))
+                .eq("id", value: userId)
+                .execute()
+        } catch {
+            if error.localizedDescription.contains("duplicate key") {
+                throw AuthServiceError.usernameTaken
+            }
+            throw error
+        }
 
         await reloadProfile()
     }

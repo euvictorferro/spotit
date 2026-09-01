@@ -89,9 +89,13 @@ struct EventDetailView: View {
     }
 
     private func toggleGoing() async {
-        guard let nowGoing = try? await SupabaseService.toggleGoing(eventId: event.id) else { return }
-        event.isGoing = nowGoing
-        event.attendeeCount += nowGoing ? 1 : -1
+        do {
+            let nowGoing = try await SupabaseService.toggleGoing(eventId: event.id)
+            event.isGoing = nowGoing
+            event.attendeeCount += nowGoing ? 1 : -1
+        } catch {
+            calendarMessage = "Não deu pra confirmar presença agora. Tente de novo."
+        }
     }
 
     /// Integração real com o Calendário do iOS (EventKit) — não é mock, cria

@@ -65,6 +65,13 @@ struct DMView: View {
         }
         .task { await load() }
         .refreshable { await load() }
+        // Sem isso, voltar de uma conversa (pop) não recarrega a lista —
+        // DMView continua montada o tempo todo (mesma NavigationStack), só
+        // .task não dispara de novo, e o preview da última mensagem ficava
+        // desatualizado até um puxar-pra-atualizar manual.
+        .onChange(of: path) { _, newPath in
+            if newPath.isEmpty { Task { await load() } }
+        }
         .onDisappear {
             path = NavigationPath()
             isSearchFocused = false
@@ -114,10 +121,11 @@ struct DMView: View {
 
     private func row(_ conversation: ConversationSummary) -> some View {
         HStack(spacing: Theme.Spacing.sm) {
-            Circle()
-                .fill(LinearGradient(colors: [.gray, .gray.opacity(0.6)], startPoint: .topLeading, endPoint: .bottomTrailing))
-                .frame(width: 52, height: 52)
-                .overlay(Text(avatarInitials(for: conversation.otherUsername)).font(.subheadline).fontWeight(.bold).foregroundStyle(.white))
+            AvatarView(
+                url: conversation.otherAvatarUrl,
+                initials: avatarInitials(for: conversation.otherUsername),
+                colors: [.gray, .gray.opacity(0.6)], size: 52
+            )
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(conversation.otherUsername).font(.subheadline).fontWeight(.semibold)
@@ -157,6 +165,7 @@ struct ChatThreadView: View {
     @State private var myUserId: UUID?
     @State private var draft = ""
     @State private var errorMessage: String?
+    @State private var isSending = false
     @EnvironmentObject private var captureButtonVisibility: CaptureButtonVisibility
     @FocusState private var isDraftFocused: Bool
 
@@ -168,15 +177,12 @@ struct ChatThreadView: View {
     var body: some View {
         VStack(spacing: 0) {
             ScrollView {
-                VStack(spacing: Theme.Spacing.sm) {
+                LazyVStack(spacing: Theme.Spacing.sm) {
                     ForEach(messages) { message in
                         let fromMe = message.senderId == myUserId
                         HStack(alignment: .bottom, spacing: 8) {
                             if !fromMe {
-                                Circle()
-                                    .fill(LinearGradient(colors: avatarColors, startPoint: .topLeading, endPoint: .bottomTrailing))
-                                    .frame(width: 26, height: 26)
-                                    .overlay(Text(avatarInitials).font(.system(size: 9)).fontWeight(.bold).foregroundStyle(.white))
+                                AvatarView(url: otherAvatarUrl, initials: avatarInitials, colors: avatarColors, size: 26)
                             } else {
                                 Spacer(minLength: 40)
                             }
@@ -225,7 +231,7 @@ struct ChatThreadView: View {
                         .font(.system(size: 30))
                         .foregroundStyle(draft.trimmingCharacters(in: .whitespaces).isEmpty ? .secondary : Color.accentColor)
                 }
-                .disabled(draft.trimmingCharacters(in: .whitespaces).isEmpty)
+                .disabled(draft.trimmingCharacters(in: .whitespaces).isEmpty || isSending)
             }
             .padding(Theme.Spacing.md)
         }
@@ -262,14 +268,22 @@ struct ChatThreadView: View {
 
     private func send() async {
         let text = draft.trimmingCharacters(in: .whitespaces)
-        guard !text.isEmpty else { return }
+        guard !text.isEmpty, !isSending else { return }
+        isSending = true
+        defer { isSending = false }
         errorMessage = nil
         do {
             try await SupabaseService.sendMessage(conversationId: conversationId, text: text)
             draft = ""
             messages = try await SupabaseService.fetchMessages(conversationId: conversationId)
         } catch {
-            errorMessage = error.localizedDescription
+            // A policy de bloqueio barra o insert via RLS — a mensagem crua
+            // do Postgrest ("new row violates row-level security policy")
+            // não diz nada pro usuário; mapeia pra algo legível.
+            let description = error.localizedDescription
+            errorMessage = description.contains("row-level security")
+                ? "Não foi possível enviar essa mensagem."
+                : description
         }
     }
 }

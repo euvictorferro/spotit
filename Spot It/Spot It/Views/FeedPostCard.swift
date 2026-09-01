@@ -10,6 +10,7 @@ struct FeedPostCard: View {
     @State private var showReport = false
     @State private var showBlockConfirm = false
     @State private var isBlocking = false
+    @State private var isTogglingLike = false
     var onBlocked: (() -> Void)?
 
     init(post: DBPost, onBlocked: (() -> Void)? = nil) {
@@ -69,10 +70,7 @@ struct FeedPostCard: View {
                 UserProfileView(username: post.username, avatarInitials: avatar.avatarInitials, avatarColors: avatar.avatarColors, userId: post.userId)
             } label: {
                 HStack(spacing: Theme.Spacing.sm) {
-                    Circle()
-                        .fill(LinearGradient(colors: avatar.avatarColors, startPoint: .topLeading, endPoint: .bottomTrailing))
-                        .frame(width: 30, height: 30)
-                        .overlay(Text(avatar.avatarInitials).font(.caption2).fontWeight(.bold).foregroundStyle(.white))
+                    AvatarView(user: avatar, url: post.avatarUrl, size: 30)
 
                     VStack(alignment: .leading, spacing: 1) {
                         Text(post.username).font(.subheadline).fontWeight(.semibold)
@@ -154,6 +152,7 @@ struct FeedPostCard: View {
                 Image(systemName: isLiked ? "heart.fill" : "heart")
                     .foregroundStyle(isLiked ? .red : .primary)
             }
+            .disabled(isTogglingLike)
 
             Button {
                 showComments = true
@@ -185,10 +184,13 @@ struct FeedPostCard: View {
     }
 
     private func toggleLike() {
+        guard !isTogglingLike else { return }
+        isTogglingLike = true
         let wasLiked = isLiked
         isLiked.toggle()
         likeCount += isLiked ? 1 : -1
         Task {
+            defer { isTogglingLike = false }
             if let liked = try? await SupabaseService.toggleLike(postId: post.id) {
                 isLiked = liked
             } else {

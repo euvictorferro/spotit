@@ -28,6 +28,7 @@ struct ProfileView: View {
     @State private var bio = ""
     @State private var avatarImageData: Data?
     @State private var loadedAvatarUrl: String?
+    @State private var profileEditError: String?
 
     private var avatarInitials: String {
         let parts = displayName.split(separator: " ")
@@ -94,8 +95,13 @@ struct ProfileView: View {
             .sheet(isPresented: $showEditProfile) {
                 EditProfileSheet(
                     displayName: $displayName, username: $username, bio: $bio, avatarImageData: $avatarImageData,
-                    onSave: { Task { await persistProfileEdits() } }
+                    onSave: { previous in Task { await persistProfileEdits(previous: previous) } }
                 )
+            }
+            .alert("Não foi possível salvar", isPresented: .init(get: { profileEditError != nil }, set: { if !$0 { profileEditError = nil } })) {
+                Button("OK") {}
+            } message: {
+                Text(profileEditError ?? "")
             }
         }
         .preferredColorScheme(.dark)
@@ -256,12 +262,26 @@ struct ProfileView: View {
         }
     }
 
-    private func persistProfileEdits() async {
-        try? await authService.updateProfile(
-            displayName: displayName.isEmpty ? nil : displayName,
-            bio: bio.isEmpty ? nil : bio,
-            avatarData: avatarImageData
-        )
+    /// `previous` é o estado de antes da edição — a UI já aplicou a troca
+    /// otimisticamente (username incluso, que antes nem era enviado ao
+    /// backend). Se salvar falhar (username duplicado, rede, etc), volta
+    /// pro valor anterior e mostra o erro de verdade em vez de engolir com
+    /// `try?` e deixar o usuário achando que salvou.
+    private func persistProfileEdits(previous: (displayName: String, username: String, bio: String, avatarImageData: Data?)) async {
+        do {
+            try await authService.updateProfile(
+                username: username,
+                displayName: displayName.isEmpty ? nil : displayName,
+                bio: bio.isEmpty ? nil : bio,
+                avatarData: avatarImageData
+            )
+        } catch {
+            displayName = previous.displayName
+            username = previous.username
+            bio = previous.bio
+            avatarImageData = previous.avatarImageData
+            profileEditError = (error as? AuthServiceError)?.errorDescription ?? error.localizedDescription
+        }
     }
 }
 
@@ -372,7 +392,7 @@ private struct EditProfileSheet: View {
     @Binding var username: String
     @Binding var bio: String
     @Binding var avatarImageData: Data?
-    let onSave: () -> Void
+    let onSave: (_ previous: (displayName: String, username: String, bio: String, avatarImageData: Data?)) -> Void
 
     @Environment(\.dismiss) private var dismiss
     @State private var draftName: String
@@ -381,7 +401,7 @@ private struct EditProfileSheet: View {
     @State private var draftAvatarData: Data?
     @State private var pickerItem: PhotosPickerItem?
 
-    init(displayName: Binding<String>, username: Binding<String>, bio: Binding<String>, avatarImageData: Binding<Data?>, onSave: @escaping () -> Void) {
+    init(displayName: Binding<String>, username: Binding<String>, bio: Binding<String>, avatarImageData: Binding<Data?>, onSave: @escaping (_ previous: (displayName: String, username: String, bio: String, avatarImageData: Data?)) -> Void) {
         _displayName = displayName
         _username = username
         _bio = bio
@@ -449,12 +469,13 @@ private struct EditProfileSheet: View {
     }
 
     private func save() {
+        let previous = (displayName: displayName, username: username, bio: bio, avatarImageData: avatarImageData)
         displayName = draftName
         username = draftUsername
         bio = draftBio
         avatarImageData = draftAvatarData
         dismiss()
-        onSave()
+        onSave(previous)
     }
 }
 

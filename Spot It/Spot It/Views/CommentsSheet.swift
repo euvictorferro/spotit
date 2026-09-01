@@ -1,11 +1,18 @@
+import Auth
 import SwiftUI
 
 struct CommentsSheet: View {
     let post: DBPost
+    @EnvironmentObject private var authService: AuthService
     @State private var comments: [DBComment] = []
     @State private var newComment = ""
     @State private var errorMessage: String?
+    @State private var loadFailed = false
     @FocusState private var isInputFocused: Bool
+
+    private var myAvatar: SearchableUser {
+        SearchableUser(id: authService.session?.user.id ?? UUID(), username: authService.profile?.username ?? "eu")
+    }
 
     var body: some View {
         NavigationStack {
@@ -18,14 +25,19 @@ struct CommentsSheet: View {
                     }
                 }
                 .listStyle(.plain)
+                .refreshable { await load() }
+
+                if loadFailed {
+                    Text("Não deu pra carregar os comentários. Puxe a lista pra tentar de novo.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .padding(Theme.Spacing.md)
+                }
 
                 Divider()
 
                 HStack(spacing: Theme.Spacing.sm) {
-                    Circle()
-                        .fill(LinearGradient(colors: [.red, .black], startPoint: .topLeading, endPoint: .bottomTrailing))
-                        .frame(width: 28, height: 28)
-                        .overlay(Text("VF").font(.system(size: 10)).fontWeight(.bold).foregroundStyle(.white))
+                    AvatarView(user: myAvatar, url: authService.profile?.avatarUrl, size: 28)
 
                     TextField("Adicione um comentário para \(post.username)...", text: $newComment)
                         .textFieldStyle(.plain)
@@ -57,10 +69,7 @@ struct CommentsSheet: View {
     private func row(_ comment: DBComment) -> some View {
         let avatar = SearchableUser(id: comment.userId, username: comment.username)
         return HStack(alignment: .top, spacing: Theme.Spacing.sm) {
-            Circle()
-                .fill(LinearGradient(colors: avatar.avatarColors, startPoint: .topLeading, endPoint: .bottomTrailing))
-                .frame(width: 34, height: 34)
-                .overlay(Text(avatar.avatarInitials).font(.caption2).fontWeight(.bold).foregroundStyle(.white))
+            AvatarView(user: avatar, url: comment.avatarUrl, size: 34)
 
             VStack(alignment: .leading, spacing: 4) {
                 (Text(comment.username).fontWeight(.semibold) + Text("  " + comment.text))
@@ -87,7 +96,12 @@ struct CommentsSheet: View {
     }
 
     private func load() async {
-        comments = (try? await SupabaseService.fetchComments(postId: post.id)) ?? []
+        loadFailed = false
+        do {
+            comments = try await SupabaseService.fetchComments(postId: post.id)
+        } catch {
+            loadFailed = true
+        }
     }
 
     private func send() {

@@ -4,6 +4,7 @@ struct EventsView: View {
     @State private var events: [DBEvent] = []
     @State private var showCreate = false
     @State private var loadFailed = false
+    @State private var toggleErrorMessage: String?
 
     var body: some View {
         Group {
@@ -41,6 +42,11 @@ struct EventsView: View {
         }
         .sheet(isPresented: $showCreate) {
             CreateEventSheet(onCreated: { Task { await load() } })
+        }
+        .alert("Ops", isPresented: .init(get: { toggleErrorMessage != nil }, set: { if !$0 { toggleErrorMessage = nil } })) {
+            Button("OK") {}
+        } message: {
+            Text(toggleErrorMessage ?? "")
         }
         .task { await load() }
         .preferredColorScheme(.dark)
@@ -96,10 +102,14 @@ struct EventsView: View {
     }
 
     private func toggle(_ event: DBEvent) async {
-        guard let nowGoing = try? await SupabaseService.toggleGoing(eventId: event.id) else { return }
-        guard let index = events.firstIndex(where: { $0.id == event.id }) else { return }
-        events[index].isGoing = nowGoing
-        events[index].attendeeCount += nowGoing ? 1 : -1
+        do {
+            let nowGoing = try await SupabaseService.toggleGoing(eventId: event.id)
+            guard let index = events.firstIndex(where: { $0.id == event.id }) else { return }
+            events[index].isGoing = nowGoing
+            events[index].attendeeCount += nowGoing ? 1 : -1
+        } catch {
+            toggleErrorMessage = "Não deu pra confirmar presença agora. Tente de novo."
+        }
     }
 }
 

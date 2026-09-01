@@ -36,6 +36,7 @@ struct UserProfileView: View {
     @State private var isTogglingBlock = false
     @State private var showReport = false
     @State private var showBlockConfirm = false
+    @State private var avatarUrl: String?
 
     init(username: String, avatarInitials: String, avatarColors: [Color], userId: UUID?) {
         self.username = username
@@ -123,7 +124,13 @@ struct UserProfileView: View {
             await loadFollowState()
             await loadPosts()
             await loadBlockState()
+            await loadAvatar()
         }
+    }
+
+    private func loadAvatar() async {
+        guard let userId else { return }
+        avatarUrl = try? await SupabaseService.fetchProfile(userId: userId).avatarUrl
     }
 
     private func loadBlockState() async {
@@ -172,10 +179,7 @@ struct UserProfileView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
             HStack(spacing: Theme.Spacing.lg) {
-                Circle()
-                    .fill(LinearGradient(colors: avatarColors, startPoint: .topLeading, endPoint: .bottomTrailing))
-                    .frame(width: 74, height: 74)
-                    .overlay(Text(avatarInitials).font(.title2).fontWeight(.bold).foregroundStyle(.white))
+                AvatarView(url: avatarUrl, initials: avatarInitials, colors: avatarColors, size: 74)
 
                 HStack(spacing: Theme.Spacing.lg) {
                     statColumn(value: "\(posts.count)", label: "posts")

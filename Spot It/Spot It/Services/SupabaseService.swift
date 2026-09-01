@@ -425,23 +425,26 @@ struct SupabaseService {
         for row in rows {
             let otherId = row.user_a == myId ? row.user_b : row.user_a
 
+            // Perfil não encontrado degrada pra um nome genérico em vez de
+            // sumir com a conversa inteira da lista — mesmo padrão usado no
+            // resto do arquivo (fetchComments, fetchPosts).
             struct ProfileRow: Decodable {
                 let username: String
                 let avatar_url: String?
             }
-            guard let profile: ProfileRow = try? await client.from("profiles")
+            let profile: ProfileRow = (try? await client.from("profiles")
                 .select("username, avatar_url")
                 .eq("id", value: otherId)
                 .single()
                 .execute()
-                .value
-            else { continue }
+                .value) ?? ProfileRow(username: "usuário", avatar_url: nil)
 
+            // maybeSingle() já devolve nil sem lançar erro quando não há
+            // mensagem ainda (conversa criada mas ninguém mandou nada) — sem
+            // `try?` aqui, um erro de rede de verdade agora propaga em vez
+            // de ser confundido com "sem mensagem" e sumir da lista calado.
             struct LastMessageRow: Decodable { let text: String }
-            // Conversa é criada (item "Mensagem" no perfil) antes de qualquer
-            // mensagem existir — sem isso, uma conversa vazia (a pessoa
-            // desistiu de mandar algo) aparece pra sempre na inbox dos dois.
-            guard let lastMessage: LastMessageRow = try? await client.from("messages")
+            let lastMessage: LastMessageRow? = try await client.from("messages")
                 .select("text")
                 .eq("conversation_id", value: row.id)
                 .order("created_at", ascending: false)
@@ -449,7 +452,10 @@ struct SupabaseService {
                 .maybeSingle()
                 .execute()
                 .value
-            else { continue }
+            // Conversa é criada (item "Mensagem" no perfil) antes de qualquer
+            // mensagem existir — sem isso, uma conversa vazia (a pessoa
+            // desistiu de mandar algo) aparece pra sempre na inbox dos dois.
+            guard let lastMessage else { continue }
 
             summaries.append(ConversationSummary(
                 id: row.id, otherUserId: otherId, otherUsername: profile.username,
@@ -485,6 +491,16 @@ struct SupabaseService {
         try await client.from("messages")
             .insert(NewMessage(conversation_id: conversationId, sender_id: myId, text: text))
             .execute()
+    }
+
+    static func fetchProfile(userId: UUID) async throws -> Profile {
+        try ensureSignedIn()
+        return try await client.from("profiles")
+            .select()
+            .eq("id", value: userId)
+            .single()
+            .execute()
+            .value
     }
 
     static func searchProfiles(username: String) async throws -> [SearchableUser] {
@@ -762,14 +778,14 @@ struct SupabaseService {
 
         var comments: [DBComment] = []
         for row in rows {
-            struct ProfileRow: Decodable { let username: String }
+            struct ProfileRow: Decodable { let username: String; let avatar_url: String? }
             let profile: ProfileRow = (try? await client.from("profiles")
-                .select("username")
+                .select("username, avatar_url")
                 .eq("id", value: row.user_id)
                 .single()
                 .execute()
-                .value) ?? ProfileRow(username: "usuário")
-            comments.append(DBComment(id: row.id, postId: row.post_id, userId: row.user_id, username: profile.username, text: row.text, createdAt: row.created_at))
+                .value) ?? ProfileRow(username: "usuário", avatar_url: nil)
+            comments.append(DBComment(id: row.id, postId: row.post_id, userId: row.user_id, username: profile.username, avatarUrl: profile.avatar_url, text: row.text, createdAt: row.created_at))
         }
         return comments
     }
@@ -785,6 +801,19 @@ struct SupabaseService {
         try await client.from("comments")
             .insert(NewComment(post_id: postId, user_id: myId, text: text))
             .execute()
+    }
+
+    /// Só a contagem, pro badge do sino — `count: .exact, head: true` não
+    /// baixa nenhuma linha, só o total.
+    static func fetchUnreadNotificationCount() async throws -> Int {
+        try ensureSignedIn()
+        guard let myId = client.auth.currentSession?.user.id else { throw SupabaseError.notSignedIn }
+        let response = try await client.from("notifications")
+            .select("id", head: true, count: .exact)
+            .eq("user_id", value: myId)
+            .eq("is_read", value: false)
+            .execute()
+        return response.count ?? 0
     }
 
     static func fetchNotifications() async throws -> [DBNotification] {
