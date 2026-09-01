@@ -24,6 +24,8 @@ struct ContentView: View {
                 WelcomeView()
             } else if authService.profile == nil {
                 OnboardingView()
+            } else if authService.needsPermissionsStep {
+                PermissionsStepView { authService.needsPermissionsStep = false }
             } else {
                 mainTabs
             }

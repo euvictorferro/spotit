@@ -17,6 +17,10 @@ final class AuthService: ObservableObject {
     @Published var session: Session?
     @Published var profile: Profile?
     @Published var isReady = false
+    /// true logo após criar o perfil pela 1ª vez — mostra a etapa de
+    /// permissões (notificação/localização) antes de entrar no app.
+    /// Em memória de propósito (não persiste): some ao terminar essa etapa.
+    @Published var needsPermissionsStep = false
 
     private var client: SupabaseClient { SupabaseService.client }
 
@@ -81,7 +85,7 @@ final class AuthService: ObservableObject {
         profile = nil
     }
 
-    func createProfile(username: String, displayName: String?, avatarData: Data?) async throws {
+    func createProfile(username: String, displayName: String?, bio: String?, avatarData: Data?) async throws {
         guard let userId = session?.user.id else { throw SupabaseError.notSignedIn }
 
         let avatarUrl = try await uploadAvatarIfNeeded(avatarData)
@@ -90,12 +94,13 @@ final class AuthService: ObservableObject {
             let id: UUID
             let username: String
             let display_name: String?
+            let bio: String?
             let avatar_url: String?
         }
 
         do {
             try await client.from("profiles")
-                .upsert(NewProfile(id: userId, username: username, display_name: displayName, avatar_url: avatarUrl))
+                .upsert(NewProfile(id: userId, username: username, display_name: displayName, bio: bio, avatar_url: avatarUrl))
                 .execute()
         } catch {
             if error.localizedDescription.contains("duplicate key") {
@@ -105,6 +110,7 @@ final class AuthService: ObservableObject {
         }
 
         await reloadProfile()
+        needsPermissionsStep = true
     }
 
     /// `username` era editável na tela (EditProfileSheet) mas nunca era

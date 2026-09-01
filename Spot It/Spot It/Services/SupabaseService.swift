@@ -861,6 +861,22 @@ struct SupabaseService {
 
     /// Só a contagem, pro badge do sino — `count: .exact, head: true` não
     /// baixa nenhuma linha, só o total.
+    /// Salva o device token do APNs — upsert por token (não por usuário) pra
+    /// não perder token de outro dispositivo se a pessoa usar o app em 2
+    /// aparelhos, e reassociar corretamente se o token já existia noutra conta.
+    static func saveDeviceToken(_ token: String) async throws {
+        try ensureSignedIn()
+        guard let myId = client.auth.currentSession?.user.id else { throw SupabaseError.notSignedIn }
+        struct NewToken: Encodable {
+            let user_id: UUID
+            let token: String
+            let platform: String
+        }
+        try await client.from("device_tokens")
+            .upsert(NewToken(user_id: myId, token: token, platform: "ios"), onConflict: "token")
+            .execute()
+    }
+
     static func fetchUnreadNotificationCount() async throws -> Int {
         try ensureSignedIn()
         guard let myId = client.auth.currentSession?.user.id else { throw SupabaseError.notSignedIn }
