@@ -1,12 +1,17 @@
+import Auth
 import Foundation
+import Supabase
 
 enum RecognizeError: LocalizedError {
     case invalidResponse(statusCode: Int, body: String)
+    case notSignedIn
 
     var errorDescription: String? {
         switch self {
         case .invalidResponse(let statusCode, let body):
             return "HTTP \(statusCode): \(body.prefix(200))"
+        case .notSignedIn:
+            return "Você precisa estar logado pra identificar um carro."
         }
     }
 }
@@ -21,10 +26,17 @@ struct RecognizeService {
     /// Aceita múltiplas fotos (ângulos diferentes do mesmo carro) — usado no
     /// fallback quando a 1ª foto sozinha não é reconhecida.
     static func recognize(imagesData: [Data]) async throws -> CarInfo {
+        // O endpoint exige um usuário autenticado (senão qualquer um na
+        // internet gastava nosso orçamento de IA sem nem ter o app).
+        guard let accessToken = SupabaseService.client.auth.currentSession?.accessToken else {
+            throw RecognizeError.notSignedIn
+        }
+
         let images = imagesData.map { $0.base64EncodedString() }
         var request = URLRequest(url: baseURL.appendingPathComponent("api/recognize"))
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
         request.httpBody = try JSONEncoder().encode(["images": images])
         // Vários ângulos + resposta longa podem passar do timeout padrão de
         // 60s do URLSession — a função no servidor já tem até 60s (vercel.json).

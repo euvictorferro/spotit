@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 
 interface Req {
   method?: string;
+  headers?: Record<string, string | string[] | undefined>;
   body?: { imageBase64?: string; images?: string[] };
 }
 interface Res {
@@ -10,6 +11,31 @@ interface Res {
 }
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+// Sem isso o endpoint era um sink público e pago: qualquer um na internet
+// podia POSTar aqui e queimar nosso orçamento de Anthropic, sem app nem
+// conta nenhuma — falhava "aberto". Aqui ele falha fechado: sem um token
+// de usuário Supabase válido, 401 antes de gastar um único token de IA.
+// Não precisa de segredo extra no servidor — a mesma anon key pública do
+// app basta pra pedir ao Supabase Auth pra validar o token do usuário.
+const SUPABASE_URL = 'https://mevdvmjtkkcerkakzkch.supabase.co';
+const SUPABASE_ANON_KEY =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ldmR2bWp0a2tjZXJrYWt6a2NoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc4NDMwOTMsImV4cCI6MjEwMzQxOTA5M30.Cm36acvnAKTfjYjFMXX8ifyY849-goGnYrO9vQyEZP0';
+
+async function authenticatedUserId(req: Req): Promise<string | null> {
+  const authHeader = req.headers?.authorization;
+  const token = typeof authHeader === 'string' && authHeader.startsWith('Bearer ')
+    ? authHeader.slice(7)
+    : null;
+  if (!token) return null;
+
+  const resp = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+    headers: { Authorization: `Bearer ${token}`, apikey: SUPABASE_ANON_KEY },
+  });
+  if (!resp.ok) return null;
+  const user = (await resp.json()) as { id?: string };
+  return user.id ?? null;
+}
 
 const SYSTEM_PROMPT = `Você identifica carros raros/supercarros em fotos e escreve um perfil
 completo do carro, no estilo de apps de catalogação (ex: apps que identificam moedas
@@ -67,6 +93,11 @@ Todos os campos numéricos/texto além dos 7 primeiros são opcionais — use nu
 export default async function handler(req: Req, res: Res) {
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'method not allowed' });
+    return;
+  }
+
+  if (!(await authenticatedUserId(req))) {
+    res.status(401).json({ error: 'unauthorized' });
     return;
   }
 
