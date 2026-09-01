@@ -65,6 +65,15 @@ final class AuthService: ObservableObject {
         try await client.auth.signOut()
     }
 
+    /// Exclusão de conta self-service (RPC `delete_user`, migration 0016) —
+    /// apaga a linha em auth.users, o que cascateia pra profile/posts/wallet/
+    /// follows/DMs/notificações/eventos. Exigido pela App Store (5.1.1v).
+    func deleteAccount() async throws {
+        try await client.rpc("delete_user").execute()
+        session = nil
+        profile = nil
+    }
+
     func createProfile(username: String, displayName: String?, avatarData: Data?) async throws {
         guard let userId = session?.user.id else { throw SupabaseError.notSignedIn }
 

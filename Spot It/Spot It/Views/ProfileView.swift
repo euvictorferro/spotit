@@ -85,7 +85,7 @@ struct ProfileView: View {
             }
             .overlay {
                 if isLoading && items.isEmpty {
-                    ProgressView()
+                    WheelLoadingView(size: 44)
                 }
             }
             .sheet(isPresented: $showSettings) {
@@ -278,6 +278,9 @@ private struct SettingsSheet: View {
     @State private var notifyEvents = true
     @State private var city = "Naples, FL"
     @State private var showLogoutConfirm = false
+    @State private var showDeleteConfirm = false
+    @State private var isDeleting = false
+    @State private var deleteError: String?
 
     var body: some View {
         NavigationStack {
@@ -309,6 +312,19 @@ private struct SettingsSheet: View {
                         showLogoutConfirm = true
                     }
                 }
+
+                Section {
+                    Button("Excluir Conta", role: .destructive) {
+                        showDeleteConfirm = true
+                    }
+                    .disabled(isDeleting)
+
+                    if let deleteError {
+                        Text(deleteError).font(.footnote).foregroundStyle(.red)
+                    }
+                } footer: {
+                    Text("Apaga permanentemente seu perfil, carros salvos, posts, curtidas, comentários, seguidores, mensagens e presenças em eventos. Não dá pra desfazer.")
+                }
             }
             .navigationTitle("Configurações")
             .navigationBarTitleDisplayMode(.inline)
@@ -324,6 +340,26 @@ private struct SettingsSheet: View {
                 }
                 Button("Cancelar", role: .cancel) {}
             }
+            .confirmationDialog("Excluir sua conta permanentemente?", isPresented: $showDeleteConfirm, titleVisibility: .visible) {
+                Button("Excluir Conta", role: .destructive) {
+                    Task { await deleteAccount() }
+                }
+                Button("Cancelar", role: .cancel) {}
+            } message: {
+                Text("Essa ação não pode ser desfeita.")
+            }
+        }
+    }
+
+    private func deleteAccount() async {
+        isDeleting = true
+        deleteError = nil
+        do {
+            try await authService.deleteAccount()
+            dismiss()
+        } catch {
+            deleteError = "Não foi possível excluir a conta agora. Tente de novo."
+            isDeleting = false
         }
     }
 }
@@ -425,25 +461,36 @@ private struct EditProfileSheet: View {
 /// Texto legal placeholder — cobre o básico (câmera, calendário, dados do
 /// carro reconhecido) mas precisa passar por um advogado antes de publicar
 /// na App Store de verdade.
+// ponytail: texto duplicado do site (public/privacy.html e public/terms.html
+// no repo do backend) pra funcionar offline dentro do app — se um mudar, o
+// outro precisa ser atualizado junto.
 private enum LegalText {
     static let terms = """
     Ao usar o Spot It, você concorda em:
 
     • Usar o app pra fotografar e catalogar carros de forma pessoal e não comercial.
-    • Não publicar conteúdo ofensivo, ilegal ou que viole direitos de terceiros no Feed ou nos comentários.
-    • Respeitar outros usuários nas mensagens diretas (DM).
+    • Não publicar conteúdo ofensivo, ilegal ou que viole direitos de terceiros no Feed, nos comentários ou nas mensagens diretas.
+    • Não assediar outros usuários nem se passar por outra pessoa ou marca.
 
-    O Spot It pode suspender contas que violem estes termos. Estes termos são um rascunho inicial — revisar com um advogado antes do lançamento público.
+    Você pode denunciar posts/perfis e bloquear qualquer usuário diretamente no app — bloquear impede que vocês vejam conteúdo um do outro ou troquem mensagens. Revisamos denúncias em até 24h e podemos remover conteúdo ou suspender contas que violem estes termos.
+
+    O reconhecimento de carros por IA é aproximado, só pra entretenimento — não é avaliação profissional.
+
+    Versão completa: spotit-gamma.vercel.app/terms.html
     """
 
     static let privacy = """
-    O Spot It acessa:
+    O Spot It coleta:
 
-    • Câmera — pra fotografar carros e identificá-los via IA.
-    • Calendário — apenas quando você escolhe "Adicionar ao Calendário" em um evento.
-    • Localização (futuro) — se ativarmos o mapa centrado em você, pediremos permissão específica antes.
+    • Conta — e-mail, usuário, nome, bio e foto de perfil.
+    • Conteúdo que você cria — fotos de carros, resultado da IA, legendas, comentários, curtidas e mensagens diretas.
+    • Localização — só quando você registra onde um carro foi avistado, com sua permissão.
 
-    Fotos e dados de carros reconhecidos ficam salvos na sua conta. Não vendemos seus dados pra terceiros. Esta política é um rascunho inicial — revisar com um advogado antes do lançamento público.
+    Usamos Supabase (banco de dados, autenticação e fotos) e Vercel (função que roda a identificação por IA) pra operar o app. Não vendemos seus dados pra terceiros.
+
+    Você pode excluir sua conta a qualquer momento em Configurações — isso apaga permanentemente seus dados.
+
+    Versão completa: spotit-gamma.vercel.app/privacy.html
     """
 }
 
