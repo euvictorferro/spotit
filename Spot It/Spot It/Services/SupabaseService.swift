@@ -24,6 +24,8 @@ struct WalletItem: Decodable, Identifiable {
     let valorEstimadoUsd: Double
     let fotoUrl: String
     let createdAt: Date
+    let lat: Double?
+    let lng: Double?
 
     let motor: String?
     let potenciaCv: Int?
@@ -54,6 +56,7 @@ struct WalletItem: Decodable, Identifiable {
         case valorEstimadoUsd = "valor_estimado_usd"
         case fotoUrl = "foto_url"
         case createdAt = "created_at"
+        case lat, lng
         case motor
         case potenciaCv = "potencia_cv"
         case aceleracao0a100 = "aceleracao_0_100"
@@ -89,6 +92,8 @@ struct WalletItem: Decodable, Identifiable {
         valorEstimadoUsd = try c.decode(Double.self, forKey: .valorEstimadoUsd)
         fotoUrl = try c.decode(String.self, forKey: .fotoUrl)
         createdAt = try c.decode(Date.self, forKey: .createdAt)
+        lat = try c.decodeIfPresent(Double.self, forKey: .lat)
+        lng = try c.decodeIfPresent(Double.self, forKey: .lng)
         motor = try c.decodeIfPresent(String.self, forKey: .motor)
         potenciaCv = try c.decodeIfPresent(Int.self, forKey: .potenciaCv)
         aceleracao0a100 = try c.decodeIfPresent(Double.self, forKey: .aceleracao0a100)
@@ -119,6 +124,7 @@ struct WalletItem: Decodable, Identifiable {
 
     init(
         id: UUID, modelo: String, ano: Int?, raridade: Int, valorEstimadoUsd: Double, fotoUrl: String, createdAt: Date,
+        lat: Double? = nil, lng: Double? = nil,
         motor: String? = nil, potenciaCv: Int? = nil, aceleracao0a100: Double? = nil, velocidadeMaximaKmh: Int? = nil,
         pesoKg: Int? = nil, producaoTotal: Int? = nil, analiseRaridade: String? = nil, analiseMercado: String? = nil,
         serie: String? = nil, edicaoEspecial: String? = nil, varianteMaisRara: CarInfo.VarianteCarro? = nil,
@@ -132,6 +138,8 @@ struct WalletItem: Decodable, Identifiable {
         self.valorEstimadoUsd = valorEstimadoUsd
         self.fotoUrl = fotoUrl
         self.createdAt = createdAt
+        self.lat = lat
+        self.lng = lng
         self.motor = motor
         self.potenciaCv = potenciaCv
         self.aceleracao0a100 = aceleracao0a100
@@ -174,7 +182,8 @@ struct SupabaseService {
         return try client.storage.from("car-photos").getPublicURL(path: fileName).absoluteString
     }
 
-    static func saveWalletItem(car: CarInfo, fotoUrl: String, lat: Double?, lng: Double?) async throws {
+    @discardableResult
+    static func saveWalletItem(car: CarInfo, fotoUrl: String, lat: Double?, lng: Double?) async throws -> UUID {
         try ensureSignedIn()
         guard let userId = client.auth.currentSession?.user.id else {
             throw SupabaseError.notSignedIn
@@ -243,7 +252,58 @@ struct SupabaseService {
             interior_destaque: car.interiorDestaque
         )
 
-        try await client.from("wallet_items").insert(item).execute()
+        struct InsertedRow: Decodable { let id: UUID }
+        let inserted: InsertedRow = try await client.from("wallet_items")
+            .insert(item)
+            .select("id")
+            .single()
+            .execute()
+            .value
+        return inserted.id
+    }
+
+    /// Atualiza um item já salvo com o perfil completo (raridade, mercado,
+    /// design etc) — usado quando esses dados chegam depois de já ter salvo
+    /// com só os campos rápidos (ver enrichment em duas fases no scan).
+    static func updateWalletItemDetails(id: UUID, car: CarInfo) async throws {
+        try ensureSignedIn()
+        struct DetailsUpdate: Encodable {
+            let motor: String?
+            let fato_interessante: String?
+            let potencia_cv: Int?
+            let aceleracao_0_100: Double?
+            let velocidade_maxima_kmh: Int?
+            let peso_kg: Int?
+            let producao_total: Int?
+            let analise_raridade: String?
+            let analise_mercado: String?
+            let serie: String?
+            let variante_mais_rara_nome: String?
+            let variante_mais_rara_ano: Int?
+            let variante_mais_rara_valor_usd: Double?
+            let variante_mais_rara_descricao: String?
+            let entre_eixos_mm: Int?
+            let comprimento_mm: Int?
+            let composicao: String?
+            let designer: String?
+            let material_bancos: String?
+            let material_volante: String?
+            let interior_destaque: String?
+        }
+        let update = DetailsUpdate(
+            motor: car.motor, fato_interessante: car.fatoInteressante,
+            potencia_cv: car.potenciaCv, aceleracao_0_100: car.aceleracao0a100,
+            velocidade_maxima_kmh: car.velocidadeMaximaKmh, peso_kg: car.pesoKg,
+            producao_total: car.producaoTotal, analise_raridade: car.analiseRaridade,
+            analise_mercado: car.analiseMercado, serie: car.serie,
+            variante_mais_rara_nome: car.varianteMaisRara?.nome, variante_mais_rara_ano: car.varianteMaisRara?.ano,
+            variante_mais_rara_valor_usd: car.varianteMaisRara?.valorEstimadoUsd, variante_mais_rara_descricao: car.varianteMaisRara?.descricao,
+            entre_eixos_mm: car.entreEixosMm, comprimento_mm: car.comprimentoMm,
+            composicao: car.composicao, designer: car.designer,
+            material_bancos: car.materialBancos, material_volante: car.materialVolante,
+            interior_destaque: car.interiorDestaque
+        )
+        try await client.from("wallet_items").update(update).eq("id", value: id).execute()
     }
 
     static func fetchWalletItems() async throws -> [WalletItem] {
@@ -253,6 +313,53 @@ struct SupabaseService {
             .order("created_at", ascending: false)
             .execute()
             .value
+    }
+
+    /// Spots pro mapa — só itens com localização. `includeFollowing: false`
+    /// traz só os seus (mapa da Wallet); `true` traz os seus + de quem você
+    /// segue (mapa do Feed), visível graças à policy da migration 0019.
+    static func fetchMapSpots(includeFollowing: Bool) async throws -> [CarSpot] {
+        try ensureSignedIn()
+        guard let myId = client.auth.currentSession?.user.id else { throw SupabaseError.notSignedIn }
+
+        struct SpotRow: Decodable {
+            let id: UUID
+            let user_id: UUID
+            let modelo: String
+            let ano: Int?
+            let raridade: Int
+            let valor_estimado_usd: Double
+            let foto_url: String
+            let created_at: Date
+            let lat: Double?
+            let lng: Double?
+        }
+
+        let baseQuery = client.from("wallet_items")
+            .select("id, user_id, modelo, ano, raridade, valor_estimado_usd, foto_url, created_at, lat, lng")
+        let rows: [SpotRow] = try await (includeFollowing ? baseQuery : baseQuery.eq("user_id", value: myId))
+            .execute()
+            .value
+        let located = rows.filter { $0.lat != nil && $0.lng != nil }
+        guard !located.isEmpty else { return [] }
+
+        struct ProfileRow: Decodable { let id: UUID; let username: String }
+        let userIds = Array(Set(located.map(\.user_id)))
+        let profiles: [ProfileRow] = try await client.from("profiles")
+            .select("id, username")
+            .in("id", values: userIds.map(\.uuidString))
+            .execute()
+            .value
+        let usernameById = Dictionary(uniqueKeysWithValues: profiles.map { ($0.id, $0.username) })
+
+        return located.map { row in
+            let item = WalletItem(
+                id: row.id, modelo: row.modelo, ano: row.ano, raridade: row.raridade,
+                valorEstimadoUsd: row.valor_estimado_usd, fotoUrl: row.foto_url, createdAt: row.created_at,
+                lat: row.lat, lng: row.lng
+            )
+            return CarSpot(item: item, username: usernameById[row.user_id] ?? "spotter", isMine: row.user_id == myId)
+        }
     }
 
     static func deleteWalletItems(ids: [UUID]) async throws {

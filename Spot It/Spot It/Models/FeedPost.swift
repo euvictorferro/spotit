@@ -96,6 +96,8 @@ extension WalletItem {
         valorEstimadoUsd = post.valorEstimadoUsd
         fotoUrl = post.fotoUrl
         createdAt = post.createdAt
+        lat = nil
+        lng = nil
         motor = nil
         potenciaCv = nil
         aceleracao0a100 = nil
@@ -126,6 +128,8 @@ extension WalletItem {
         self.valorEstimadoUsd = valorEstimadoUsd
         fotoUrl = ""
         createdAt = Date()
+        lat = nil
+        lng = nil
         self.motor = motor
         potenciaCv = nil
         aceleracao0a100 = nil

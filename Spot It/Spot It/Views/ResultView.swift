@@ -329,11 +329,6 @@ struct ResultView: View {
         isSaving = true
         saveError = nil
 
-        // Garante que salva o perfil completo, não só os 7 campos rápidos —
-        // se o usuário tocar "Salvar" antes do enrichment em background
-        // terminar, espera aqui (o botão já mostra "Salvando...").
-        await enrichTask?.value
-
         // Mesma compressão do scan (resizedForUpload + cap) — a imagem
         // original em resolução total (12MP+) deixava o upload lento e mais
         // propenso a falhar em rede ruim.
@@ -344,8 +339,18 @@ struct ResultView: View {
         let coordinate = await LocationService.shared.currentLocation()
         do {
             let url = try await SupabaseService.uploadPhoto(imageData: data)
-            try await SupabaseService.saveWalletItem(car: carInfo, fotoUrl: url, lat: coordinate?.latitude, lng: coordinate?.longitude)
+            // Salva já com o que tiver pronto (rápido — não espera o
+            // enrichment) e sai da tela na hora. Se o perfil completo ainda
+            // não chegou, uma Task solta completa o item assim que chegar,
+            // mesmo depois da tela ter fechado — sem travar o usuário aqui.
+            let itemId = try await SupabaseService.saveWalletItem(car: carInfo, fotoUrl: url, lat: coordinate?.latitude, lng: coordinate?.longitude)
             onFinish()
+            if isEnriching, let enrichTask {
+                Task {
+                    await enrichTask.value
+                    try? await SupabaseService.updateWalletItemDetails(id: itemId, car: carInfo)
+                }
+            }
         } catch {
             saveError = "Erro ao salvar: \(error.localizedDescription)"
         }

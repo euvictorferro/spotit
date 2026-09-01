@@ -14,10 +14,8 @@ struct MapView: View {
         MKCoordinateRegion(center: .init(latitude: 26.14, longitude: -81.79), span: .init(latitudeDelta: 0.6, longitudeDelta: 0.6))
     )
     @State private var detailItem: WalletItem?
-
-    // Sem localização real salva por carro ainda (a Wallet não coleta
-    // lat/lng no momento da captura) — mapa vazio até isso existir.
-    private var spots: [CarSpot] { [] }
+    @State private var spots: [CarSpot] = []
+    @State private var isLoading = true
 
     var body: some View {
         Map(position: $position) {
@@ -37,7 +35,7 @@ struct MapView: View {
         .navigationTitle("Mapa")
         .navigationBarTitleDisplayMode(.inline)
         .overlay {
-            if spots.isEmpty {
+            if spots.isEmpty && !isLoading {
                 EmptyStateView(icon: "mappin.slash", message: "Nenhum local registrado ainda.")
             }
         }
@@ -54,6 +52,16 @@ struct MapView: View {
         .fullScreenCover(item: $detailItem) { item in
             CarDetailPageView(item: item)
         }
+        .task { await load() }
+    }
+
+    private func load() async {
+        isLoading = true
+        spots = (try? await SupabaseService.fetchMapSpots(includeFollowing: scope == .feed)) ?? []
+        if let first = spots.first {
+            position = .region(MKCoordinateRegion(center: first.coordinate, span: .init(latitudeDelta: 0.6, longitudeDelta: 0.6)))
+        }
+        isLoading = false
     }
 }
 

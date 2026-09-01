@@ -100,15 +100,9 @@ struct CarDetailPageView: View {
     // MARK: - Hero + título
 
     private var hero: some View {
-        RoundedRectangle(cornerRadius: Theme.cornerRadius)
-            .fill(
-                LinearGradient(
-                    colors: [Theme.rarityColor(item.raridade).opacity(0.55), Theme.rarityColor(item.raridade).opacity(0.15)],
-                    startPoint: .top, endPoint: .bottom
-                )
-            )
+        WalletPhotoThumb(fotoUrl: item.fotoUrl, raridade: item.raridade)
             .frame(height: 220)
-            .overlay(Image(systemName: "car.side.fill").font(.system(size: 60)).foregroundStyle(Theme.rarityColor(item.raridade)))
+            .clipShape(RoundedRectangle(cornerRadius: Theme.cornerRadius))
             .rarityPhotoBorder(item.raridade)
     }
 
