@@ -3,6 +3,7 @@ import Supabase
 
 struct FeedPostCard: View {
     let post: DBPost
+    @EnvironmentObject private var tabSelection: TabSelection
     @State private var isLiked: Bool
     @State private var likeCount: Int
     @State private var showDetails = false
@@ -22,6 +23,23 @@ struct FeedPostCard: View {
 
     private var avatar: SearchableUser {
         SearchableUser(id: post.userId, username: post.username)
+    }
+
+    private var isMine: Bool {
+        post.userId == SupabaseService.client.auth.currentSession?.user.id
+    }
+
+    private var headerContent: some View {
+        HStack(spacing: Theme.Spacing.sm) {
+            AvatarView(user: avatar, url: post.avatarUrl, size: 30)
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(post.username).font(.subheadline).fontWeight(.semibold)
+                Text(post.createdAt.formatted(.relative(presentation: .named)))
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+        }
     }
 
     var body: some View {
@@ -75,17 +93,21 @@ struct FeedPostCard: View {
 
     private var header: some View {
         HStack(spacing: Theme.Spacing.sm) {
-            NavigationLink {
-                UserProfileView(username: post.username, avatarInitials: avatar.avatarInitials, avatarColors: avatar.avatarColors, userId: post.userId)
-            } label: {
-                HStack(spacing: Theme.Spacing.sm) {
-                    AvatarView(user: avatar, url: post.avatarUrl, size: 30)
-
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(post.username).font(.subheadline).fontWeight(.semibold)
-                        Text(post.createdAt.formatted(.relative(presentation: .named)))
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
+            Group {
+                if isMine {
+                    // Seu próprio post: vai pra aba Perfil de verdade (editável),
+                    // não pro perfil "de visualização" (Seguir/Bloquear) que só
+                    // faz sentido pra outra pessoa.
+                    Button {
+                        tabSelection.selected = .profile
+                    } label: {
+                        headerContent
+                    }
+                } else {
+                    NavigationLink {
+                        UserProfileView(username: post.username, avatarInitials: avatar.avatarInitials, avatarColors: avatar.avatarColors, userId: post.userId)
+                    } label: {
+                        headerContent
                     }
                 }
             }
@@ -93,7 +115,7 @@ struct FeedPostCard: View {
 
             Spacer()
 
-            if post.userId != SupabaseService.client.auth.currentSession?.user.id {
+            if !isMine {
                 FollowButton(userId: post.userId)
 
                 Menu {
@@ -285,6 +307,7 @@ private struct FollowButton: View {
 #Preview {
     NavigationStack {
         FeedPostCard(post: DBPost(id: UUID(), userId: UUID(), username: "rk.spotter", avatarUrl: nil, modelo: "Porsche 911 GT3 RS", raridade: 8, valorEstimadoUsd: 223_000, fotoUrl: "", photos: [""], location: nil, caption: "track day pack completo", createdAt: Date(), likeCount: 42, commentCount: 3, likedByMe: false))
+            .environmentObject(TabSelection())
             .padding()
     }
 }

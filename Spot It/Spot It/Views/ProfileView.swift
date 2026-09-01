@@ -213,7 +213,12 @@ struct ProfileView: View {
                             PostDetailView(post: post)
                         }
                     } label: {
+                        // frame(maxWidth: .infinity) ANTES do aspectRatio —
+                        // sem isso a AsyncImage (sem tamanho intrínseco) deixa
+                        // a célula assumir o tamanho real da foto em vez do
+                        // 1/3 da coluna do grid, e a foto "estoura" a grade.
                         WalletPhotoThumb(fotoUrl: post.fotoUrl, raridade: post.raridade ?? 1)
+                            .frame(maxWidth: .infinity)
                             .aspectRatio(3 / 4, contentMode: .fill)
                             .clipped()
                     }

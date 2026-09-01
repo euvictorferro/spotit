@@ -11,6 +11,7 @@ struct ContentView: View {
     @EnvironmentObject private var authService: AuthService
     @State private var showCapture = false
     @StateObject private var captureButtonVisibility = CaptureButtonVisibility()
+    @StateObject private var tabSelection = TabSelection()
 
     var body: some View {
         Group {
@@ -37,23 +38,29 @@ struct ContentView: View {
 
     private var mainTabs: some View {
         ZStack(alignment: .bottomTrailing) {
-            TabView {
+            TabView(selection: $tabSelection.selected) {
                 FeedView()
                     .tabItem { Image(systemName: "house") }
+                    .tag(MainTab.feed)
 
                 DMView()
                     .tabItem { Image(systemName: "message") }
+                    .tag(MainTab.dm)
 
                 SearchUsersView()
                     .tabItem { Image(systemName: "magnifyingglass") }
+                    .tag(MainTab.search)
 
                 WalletView()
                     .tabItem { Image(systemName: "wallet.pass") }
+                    .tag(MainTab.wallet)
 
                 ProfileView()
                     .tabItem { Image(systemName: "person.circle") }
+                    .tag(MainTab.profile)
             }
             .environmentObject(captureButtonVisibility)
+            .environmentObject(tabSelection)
 
             if !captureButtonVisibility.isHidden {
                 Button {
